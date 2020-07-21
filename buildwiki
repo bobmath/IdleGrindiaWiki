@@ -1,0 +1,30 @@
+#!/usr/bin/env perl
+# Read the Unity data file bin.data.unityweb and build Wiki pages
+use strict;
+use warnings;
+use lib 'lib';
+use Grindia;
+use Unity::UnityWeb;
+use Unity::UnityFS;
+
+my $file = 'bin.data.unityweb';
+my $dir = 'data';
+mkdir $dir;
+print "Reading $file\n";
+Unity::UnityWeb::extract($file, $dir);
+Unity::UnityFS::extract("$dir/data.unity3d", $dir);
+
+my $ctx = Grindia::get_context($dir);
+mkdir 'wiki';
+
+for my $pkg (qw[ Artifacts Dungeons Enemies Heroes Pets Prestige Quests
+   Recipes Skills Trials Worlds ])
+{
+   print "Writing $pkg\n";
+   require "Wiki/$pkg.pm";
+   no strict 'refs';
+   &{"Wiki::${pkg}::build"}($ctx);
+}
+
+system('diff -ur old wiki');
+

@@ -80,16 +80,11 @@ sub build {
       if (my $dung = $dungeons{$world}) {
          foreach my $type (sort keys %$dung) {
             my $area = $dung->{$type};
-            my $levels = $area->{enemy_levels};
-            my $lo = my $hi = $levels->[0];
-            foreach my $lvl (@$levels) {
-               $lo = $lvl if $lvl < $lo;
-               $hi = $lvl if $lvl > $hi;
-            }
             @out = ();
             describe_area(999, $dung->{$type}, \@out, $flags);
             my $row = $out[0];
-            print $OUT "|-\n| $type || $lo–$hi || $row->{txt}\n";
+            print $OUT "|-\n| $type || $row->{lvl_lo}–$row->{lvl_hi} || ",
+               $row->{txt}, "\n";
          }
       }
 
@@ -114,6 +109,15 @@ sub describe_area {
    my $min = $area->{level_min};
    my $max = $area->{level_max};
    my $txt = join(',', sort keys %prefix) . ' || ';
+
+   my $levels = $area->{enemy_levels};
+   if ($levels && @$levels) {
+      $min = $max = $levels->[0];
+      foreach my $lvl (@$levels) {
+         $min = $lvl if $lvl < $min;
+         $max = $lvl if $lvl > $max;
+      }
+   }
 
    if (my @tiers = sort { $a <=> $b } keys %tiers) {
       $txt .= 'W';

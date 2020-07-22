@@ -4,23 +4,10 @@ use warnings;
 
 sub extract {
    my ($file, $dir) = @_;
-   open my $IN, '<:raw', $file or die "Can't read $file: $!\n";
    $dir //= '' and $dir .= '/';
+   my $IN = open_gzipped($file, $dir);
    my $buf;
-   read($IN, $buf, 20) == 20 or die 'Not a UnityWeb file';
-   if ($buf =~ /^\x1f\x8b/) {
-      require IO::Uncompress::Gunzip;
-      my $out_file = $dir ? $dir . $file : $file . '.unz';
-      seek($IN, 0, 0) or die;
-      open my $OUT, '+>:raw', $out_file or die "Can't write $out_file: $!";
-      IO::Uncompress::Gunzip::gunzip($IN, $OUT)
-         or die "gunzip failed: $IO::Uncompress::GunzipGunzipError";
-      close $IN;
-      $IN = $OUT;
-      seek($IN, 0, 0) or die;
-      read($IN, $buf, 20) == 20 or die 'Not a UnityWeb file';
-   }
-
+   read($IN, $buf, 20) == 20 or die;
    substr($buf, 0, 16) eq "UnityWebData1.0\0" or die 'Not a UnityWeb file';
    my $len = unpack('V', substr($buf, 16, 4)) - 20;
    read($IN, $buf, $len) == $len or die 'missing header';
@@ -37,6 +24,25 @@ sub extract {
       copy_data($IN, $file_len, $dir . $file_name);
    }
    close $IN;
+}
+
+sub open_gzipped {
+   my ($file, $dir) = @_;
+   open my $IN, '<:raw', $file or die "Can't read $file: $!\n";
+   my $buf;
+   read($IN, $buf, 2) == 2 or die;
+   if ($buf eq "\x1f\x8b") {
+      require IO::Uncompress::Gunzip;
+      my $out_file = $dir ? $dir . $file : $file . '.unz';
+      seek($IN, 0, 0) or die;
+      open my $OUT, '+>:raw', $out_file or die "Can't write $out_file: $!";
+      IO::Uncompress::Gunzip::gunzip($IN, $OUT)
+         or die "gunzip failed: $IO::Uncompress::GunzipGunzipError";
+      close $IN;
+      $IN = $OUT;
+   }
+   seek($IN, 0, 0) or die;
+   return $IN;
 }
 
 sub copy_data {

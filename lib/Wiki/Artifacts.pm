@@ -17,16 +17,16 @@ sub build {
       }
       print $OUT qq[|}\n\n];
 
-      for my $i (0 .. 9) {
+      for my $i (0 .. $#{$obj->{stats}}) {
          print $OUT "==$obj->{names}[$i]==\n";
          my $stats = $obj->{stats}[$i];
-         for my $j (0 .. 5) {
+         for my $j (0 .. $#$stats) {
             my $info = $stats->[$j];
             my $desc = $info->{desc};
             $desc =~ s/\s+/ /g;
             $desc =~ s/ $//;
             $desc =~ s/\\n/<br>/g;
-            print $OUT "* [[Stars$j.png|$j]] $desc\n",
+            print $OUT "* [[File:Stars$j.png|$j]] $desc\n",
                Grindia::describe_attack($info, 'enemy');
             ;
          }

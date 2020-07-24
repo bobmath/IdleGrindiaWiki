@@ -3,11 +3,10 @@ use utf8;
 use strict;
 use warnings;
 
-my @pet_order = ( 'Fox', 'Hare', 'Owl', 'Unicorn', 'Rat', 'Dog',
-   'Turtle', 'Dolphin', 'Lizard', 'Cactus', 'Cat', 'Ghost', 'Slime Squared',
-   'Slime' );
+my @pet_order = ( 'Fox', 'Hare', 'Owl', 'Unicorn', 'Rat', 'Dog', 'Turtle',
+   'Dolphin', 'Lizard', 'Cactus', 'Cat', 'Ghost', 'Slime²', 'Slime' );
 my @artifacts = qw( Bull Meteor Tree Blessing Rat City Lifeguard Bubble
-   Desert Scarab );
+   Desert Scarab Undead Holy );
 
 sub build {
    my ($ctx) = @_;

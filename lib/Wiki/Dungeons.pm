@@ -107,7 +107,8 @@ sub show_dungeon {
       @rows,
       qq[|}\n] if @rows;
 
-   print $OUT "\n";
+   print $OUT "\n[[Category:Dungeons and Raids]]\n";
+   close $OUT;
 }
 
 sub show_pets {

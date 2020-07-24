@@ -4,8 +4,8 @@ use strict;
 use warnings;
 
 my @pet_order = ( 'Fox', 'Hare', 'Owl', 'Unicorn', 'Rat', 'Dog',
-   'Turtle', 'Dolphin', 'Lizard', 'Cactus', 'Cat', 'Ghost', 'Cube Slime',
-   'Round Slime' );
+   'Turtle', 'Dolphin', 'Lizard', 'Cactus', 'Cat', 'Ghost', 'Slime Squared',
+   'Slime' );
 my @artifacts = qw( Bull Meteor Tree Blessing Rat City Lifeguard Bubble
    Desert Scarab );
 

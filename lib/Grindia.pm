@@ -542,7 +542,7 @@ sub describe_buff {
          if $buff->{value2};
    }
    elsif ($type == 34) {
-      $desc = sprintf "Healing increased by %g%%, gain %g%% DEF and WIS",
+      $desc = sprintf "Healing increased by %g%%, gain %g%% END and WIS",
          $buff->{value1}*100, $buff->{value2}*100;
    }
    else {

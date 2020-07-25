@@ -2,6 +2,7 @@ package Wiki::Enemies;
 use utf8;
 use strict;
 use warnings;
+use POSIX qw( ceil );
 
 my %enemy_types = (
    1  => 'Slime',
@@ -133,8 +134,10 @@ sub write_enemies {
          || $a->{lvl_hi} <=> $b->{lvl_hi} } values %{$enemies->{$type}};
       (my $file = $type) =~ s/\s+/_/g;
       open my $OUT, '>:utf8', "wiki/Enemies/$file" or die;
+      my $world = ceil($records[0]{enemy}{type} / 5);
       print $OUT "[[File:$type.png|right]]\n",
-         "The '''$type''' is an [[Enemy]] in [[Idle Grindia]].{{Clear}}\n\n";
+         "The '''$type''' is a [[World $world]] [[Enemy]] in [[Idle Grindia]].",
+         "{{Clear}}\n\n";
       foreach my $rec (@records) {
          print $OUT qq[{| class="wikitable" width="100%"\n],
             qq[|-\n| colspan=3 | '''$rec->{enemy}{title}'''\n];
@@ -142,7 +145,8 @@ sub write_enemies {
          my $where;
          if ($rec->{loc} eq 'W') {
             $where = "[[World $rec->{world}]] Zone $rec->{zone_lo}";
-            $where .= '–' . $rec->{zone_hi} if $rec->{zone_hi} > $rec->{zone_lo};
+            $where .= '–' . $rec->{zone_hi}
+               if $rec->{zone_hi} > $rec->{zone_lo};
          }
          else {
             my $w = $rec->{world};

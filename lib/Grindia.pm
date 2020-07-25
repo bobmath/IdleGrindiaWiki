@@ -535,6 +535,16 @@ sub describe_buff {
    elsif ($type == 32) {
       $desc = "Remove$whose2 Shield";
    }
+   elsif ($type == 33) {
+      $desc = sprintf "Can't heal, gain %+g%% STR and INT",
+         $buff->{value1}*100;
+      $desc .= sprintf ", %+g%% Crit Chance", $buff->{value2}
+         if $buff->{value2};
+   }
+   elsif ($type == 34) {
+      $desc = sprintf "Healing increased by %g%%, gain %g%% DEF and WIS",
+         $buff->{value1}*100, $buff->{value2}*100;
+   }
    else {
       $desc = "apply buff $type";
    }

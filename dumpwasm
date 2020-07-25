@@ -1,0 +1,11 @@
+#!/usr/bin/env perl
+# Read the web assembly file bin.wasm.code.unityweb and dump the contents.
+# This may be rather slow.
+use strict;
+use warnings;
+use lib 'lib';
+use Wasm::Dump;
+
+mkdir 'code';
+Wasm::Dump->extract('bin.wasm.code.unityweb', 'code');
+

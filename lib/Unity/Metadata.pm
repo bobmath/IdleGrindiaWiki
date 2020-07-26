@@ -24,15 +24,18 @@ sub extract {
    read_params($meta);
    read_properties($meta);
    read_defaults($meta);
+   read_usage($meta);
    get_gen_methods($meta);
    get_type_layouts($meta);
    get_interop($meta);
    read_code($meta, $codedir);
    write_types($meta, 'types.txt');
+   write_record($metadir . 'memtables.txt', $meta->{memtables});
    write_records($metadir, 'typeinfo', $meta->{typeinfo});
    write_records($metadir, 'typedefs', $meta->{typedefs});
    write_records($metadir, 'methods', $meta->{methods});
    write_records($metadir, 'specs', $meta->{meth_specs});
+   write_records($metadir, 'usage', $meta->{usage_lists});
 }
 
 sub write_types {
@@ -168,7 +171,7 @@ sub read_code {
       }
    }
 
-   foreach my $type (@{$meta->{types}}) {
+   foreach my $type (@{$meta->{typedefs}}) {
       my $inst = $type->{instants} or next;
       foreach my $sig (sort keys %$inst) {
          my $methods = $inst->{$sig};
@@ -204,6 +207,44 @@ sub read_code {
    }
    close $OUT;
    close $IN;
+}
+
+my %usage_type = (
+   1 => 'type_info',
+   2 => 'il2cpp_type',
+   3 => 'method_def',
+   4 => 'field',
+   5 => 'string',
+   6 => 'method_ref',
+);
+
+sub read_usage {
+   my ($meta) = @_;
+
+   $meta->{usage_lists} = my $lists = read_records($meta, 'usage_lists', [
+      ['usage_start', 'l'],
+      ['usage_count', 'l'] ]);
+
+   my $pairs = read_records($meta, 'usage_pairs', [
+      ['dest_idx', 'l'],
+      ['src_idx', 'L'] ]);
+   foreach my $pair (@$pairs) {
+      my $idx = $pair->{src_idx};
+      my $type = $idx >> 29;
+      $pair->{src_type} = $usage_type{$type};
+      $pair->{src_idx} = $idx &= 0x1fffffff;
+      if ($type == 1) {
+         $pair->{src} = $meta->{typeinfo}[$idx]{name};
+      }
+      elsif ($type == 5) {
+         $pair->{src} = $meta->{ustrings}{$idx};
+      }
+   }
+
+   foreach my $list (@$lists) {
+      $list->{usage} = get_slice($pairs,
+         $list->{usage_start}, $list->{usage_count});
+   }
 }
 
 sub read_interfaces {
@@ -521,6 +562,7 @@ sub find_codeinfo {
       foreach my $ptr (@ptrs) {
          next SEARCH if $ptr > $meth_count;
       }
+      $meta->{memtables}{code_info} = { count=>7, off=>$pos };
       last;
    }
 
@@ -559,6 +601,7 @@ sub find_typeinfo {
       foreach my $ptr (@ptrs) {
          next SEARCH if ($ptr & 3) || $ptr >= $memlen;
       }
+      $meta->{memtables}{type_info} = { count=>8, off=>$pos-40 };
       last;
    }
 
@@ -879,27 +922,27 @@ sub read_properties {
 sub read_strings {
    my ($meta) = @_;
    my $data = read_bytes($meta, 'strings');
-   my %strings;
+   $meta->{strings} = my $strings = {};
    while ($data =~ /\G(.*?)\0/gs) {
-      $strings{$-[0]} = decode_utf8($1);
+      $strings->{$-[0]} = decode_utf8($1);
    }
-   $meta->{strings} = \%strings;
 
    local $Data::Dumper::Indent = 1;
    local $Data::Dumper::Terse = 1;
    local $Data::Dumper::Sortkeys = sub {[sort {$a<=>$b} keys %{$_[0]}]};
    open my $OUT, '>:utf8', 'meta/strings.txt';
-   print $OUT Dumper(\%strings), "\n";
+   print $OUT Dumper($strings), "\n";
    close $OUT;
 
    my $ptrs = read_ints($meta, 'string_ptrs');
    $data = read_bytes($meta, 'string_data');
-   my %ustrings;
+   $meta->{ustrings} = my $ustrings = {};
    for (my $i = 0; $i < $#$ptrs; $i += 2) {
-      $ustrings{$i*4} = decode_utf8(substr($data, $ptrs->[$i+1], $ptrs->[$i]));
+      $ustrings->{$i>>1} =
+         decode_utf8(substr($data, $ptrs->[$i+1], $ptrs->[$i]));
    }
    open $OUT, '>:utf8', 'meta/ustrings.txt';
-   print $OUT Dumper(\%ustrings), "\n";
+   print $OUT Dumper($ustrings), "\n";
    close $OUT;
 }
 
@@ -965,6 +1008,16 @@ sub read_records {
       push @records, \%info;
    }
    return \@records;
+}
+
+sub write_record {
+   my ($file, $rec) = @_;
+   open my $OUT, '>:utf8', $file or die "Can't write $file: $!\n";
+   local $Data::Dumper::Indent = 1;
+   local $Data::Dumper::Terse = 1;
+   local $Data::Dumper::Sortkeys = 1;
+   print $OUT Dumper($rec);
+   close $OUT;
 }
 
 sub write_records {

@@ -24,10 +24,10 @@ sub extract {
    read_params($meta);
    read_properties($meta);
    read_defaults($meta);
-   read_usage($meta);
    get_gen_methods($meta);
    get_type_layouts($meta);
    get_interop($meta);
+   read_usage($meta);
    read_code($meta, $codedir);
    write_types($meta, 'types.txt');
    write_record($metadir . 'memtables.txt', $meta->{memtables});
@@ -221,9 +221,12 @@ my %usage_type = (
 sub read_usage {
    my ($meta) = @_;
 
-   $meta->{usage_lists} = my $lists = read_records($meta, 'usage_lists', [
-      ['usage_start', 'l'],
-      ['usage_count', 'l'] ]);
+   my $field_refs = read_records($meta, 'field_refs', [
+      ['type_idx', 'l'],
+      ['field_idx', 'l'] ]);
+   foreach my $ref (@$field_refs) {
+      $ref->{type} = $meta->{typenames}[$ref->{type_idx}];
+   }
 
    my $pairs = read_records($meta, 'usage_pairs', [
       ['dest_idx', 'l'],
@@ -233,14 +236,31 @@ sub read_usage {
       my $type = $idx >> 29;
       $pair->{src_type} = $usage_type{$type};
       $pair->{src_idx} = $idx &= 0x1fffffff;
-      if ($type == 1) {
-         $pair->{src} = $meta->{typeinfo}[$idx]{name};
+      if ($type == 1 || $type == 2) {
+         $pair->{src} = $meta->{typenames}[$idx];
+      }
+      elsif ($type == 3) {
+         $pair->{src} = $meta->{methods}[$idx]{name};
+      }
+      elsif ($type == 4) {
+         $pair->{src} = $field_refs->[$idx];
       }
       elsif ($type == 5) {
          $pair->{src} = $meta->{ustrings}{$idx};
       }
+      elsif ($type == 6) {
+         my $spec = $meta->{meth_specs}[$idx] or next;
+         my $src = $spec->{class};
+         $src .= $spec->{class_sig} if $spec->{class_sig};
+         $src .= '.' . $spec->{method};
+         $src .= $spec->{method_sig} if $spec->{method_sig};
+         $pair->{src} = $src;
+      }
    }
 
+   $meta->{usage_lists} = my $lists = read_records($meta, 'usage_lists', [
+      ['usage_start', 'l'],
+      ['usage_count', 'l'] ]);
    foreach my $list (@$lists) {
       $list->{usage} = get_slice($pairs,
          $list->{usage_start}, $list->{usage_count});
@@ -487,6 +507,7 @@ sub get_gen_methods {
          unused => 1,
       };
       push @$meth_specs, $spec;
+      $spec->{class} = $meth->{_owner};
       if ($class_sig >= 0) {
          $spec->{class_sig} = my $sig = $geninsts->[$class_sig];
          my $type = $meta->{typedefs}[$meth->{_owner_idx}] or die;

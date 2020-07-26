@@ -1,11 +1,15 @@
 #!/usr/bin/env perl
 # Read the web assembly file bin.wasm.code.unityweb and dump the contents.
-# This may be rather slow.
+# This may be rather slow. Also decodes Il2CppData Metadata file.
 use strict;
 use warnings;
 use lib 'lib';
 use Wasm::Dump;
+use Unity::Metadata;
 
 mkdir 'code';
 Wasm::Dump->extract('bin.wasm.code.unityweb', 'code');
+mkdir 'meta';
+Unity::Metadata->extract('data/Il2CppData_Metadata_global-metadata.dat',
+   'code', 'meta');
 

@@ -23,10 +23,10 @@ sub extract {
    read_nested_types($meta);
    read_params($meta);
    read_properties($meta);
-   read_defaults($meta);
    get_gen_methods($meta);
    get_type_layouts($meta);
    get_interop($meta);
+   read_defaults($meta);
    read_usage($meta);
    read_code($meta, $codedir);
    write_types($meta, 'types.txt');
@@ -337,7 +337,6 @@ sub read_defaults {
          $owner = $meta->{params}[$idx];
       }
       die unless $owner;
-      #$owner->{default_info} = $def;
       $def->{type} = my $type = $meta->{typenames}[$def->{type_idx}] or next;
       my $off = $def->{data_idx};
       next if $off < 0;
@@ -375,6 +374,13 @@ sub read_defaults {
       elsif ($type eq 'System.String') {
          my $len = unpack('V', substr($data, $off, 4));
          $val = decode_utf8(substr($data, $off+4, $len));
+      }
+      else {
+         $type = $meta->{typeinfo}[$def->{type_idx}] or next;
+         $type = $meta->{typedefs}[$type->{idx}] or next;
+         my $size = $type->{size}[1] or next;
+         $owner->{default_raw} = unpack 'H*', substr($data, $off, $size);
+         # probably an array initializer
       }
       $owner->{default} = $val;
    }

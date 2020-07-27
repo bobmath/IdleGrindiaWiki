@@ -212,10 +212,10 @@ sub read_code {
 my %usage_type = (
    1 => 'type_info',
    2 => 'il2cpp_type',
-   3 => 'method_def',
+   3 => 'method',
    4 => 'field',
    5 => 'string',
-   6 => 'method_ref',
+   6 => 'gen_method',
 );
 
 sub read_usage {
@@ -225,7 +225,10 @@ sub read_usage {
       ['type_idx', 'l'],
       ['field_idx', 'l'] ]);
    foreach my $ref (@$field_refs) {
-      $ref->{type} = $meta->{typenames}[$ref->{type_idx}];
+      my $info = $meta->{typeinfo}[$ref->{type_idx}] or next;
+      my $type = $meta->{typedefs}[$info->{idx}] or next;
+      my $field = $type->{fields}[$ref->{field_idx}] or next;
+      $ref->{name} = $type->{name} . '.' . $field->{name};
    }
 
    my $pairs = read_records($meta, 'usage_pairs', [
@@ -240,10 +243,11 @@ sub read_usage {
          $pair->{src} = $meta->{typenames}[$idx];
       }
       elsif ($type == 3) {
-         $pair->{src} = $meta->{methods}[$idx]{name};
+         my $meth = $meta->{methods}[$idx] or next;
+         $pair->{src} = $meth->{_owner} . '.' . $meth->{name};
       }
       elsif ($type == 4) {
-         $pair->{src} = $field_refs->[$idx];
+         $pair->{src} = $field_refs->[$idx]{name};
       }
       elsif ($type == 5) {
          $pair->{src} = $meta->{ustrings}{$idx};

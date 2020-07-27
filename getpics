@@ -1,0 +1,12 @@
+#!/usr/bin/env perl
+# Extract pictures from the Unity asset files
+use strict;
+use warnings;
+use lib 'lib';
+use Grindia;
+use Unity::Images;
+
+my $ctx = Grindia::get_context('data');
+mkdir 'pics';
+Unity::Images->extract($ctx, 'pics');
+

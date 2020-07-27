@@ -99,9 +99,15 @@ sub convert_bc1 {
       for (my $x = 0; $x < $wid; $x += 4) {
          my @buf = unpack 'v*', $bytes->read_bytes(8);
          my $set = $buf[0] > $buf[1];
-         my ($r0, $g0, $b0) = unpack_color($buf[0]);
-         my ($r1, $g1, $b1) = unpack_color($buf[1]);
-         my $bits = $buf[2] | ($buf[3] << 16);
+         my $bits = $buf[0];
+         my $r0 = 255/31*(($bits >> 11) & 0x1f);
+         my $g0 = 255/63*(($bits >> 5) & 0x3f);
+         my $b0 = 255/31*($bits & 0x1f);
+         $bits = $buf[1];
+         my $r1 = 255/31*(($bits >> 11) & 0x1f);
+         my $g1 = 255/63*(($bits >> 5) & 0x3f);
+         my $b1 = 255/31*($bits & 0x1f);
+         $bits = $buf[2] | ($buf[3] << 16);
          for my $i (0 .. 3) {
             my $p = (($y + $i) * $wid + $x) * 4;
             for my $j (0 .. 3) {
@@ -207,8 +213,14 @@ sub convert_bc3 {
          }
 
          my $set = $buf[4] > $buf[5];
-         my ($r0, $g0, $b0) = unpack_color($buf[4]);
-         my ($r1, $g1, $b1) = unpack_color($buf[5]);
+         $bits = $buf[4];
+         my $r0 = 255/31*(($bits >> 11) & 0x1f);
+         my $g0 = 255/63*(($bits >> 5) & 0x3f);
+         my $b0 = 255/31*($bits & 0x1f);
+         $bits = $buf[5];
+         my $r1 = 255/31*(($bits >> 11) & 0x1f);
+         my $g1 = 255/63*(($bits >> 5) & 0x3f);
+         my $b1 = 255/31*($bits & 0x1f);
          $bits = $buf[6] | ($buf[7] << 16);
          for my $i (0 .. 3) {
             my $p = (($y + $i) * $wid + $x) * 4;
@@ -267,13 +279,6 @@ sub convert_bc3 {
    $png->set_rows(\@rows);
    my $file = filename($obj->{name}) . '.png';
    $png->write_png_file($dir . $file);
-}
-
-sub unpack_color {
-   my ($c) = @_;
-   return (255/31*(($c >> 11) & 0x1f),
-      255/63*(($c >> 5) & 0x3f),
-      255/31*($c & 0x1f));
 }
 
 1 # end Images.pm

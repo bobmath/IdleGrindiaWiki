@@ -3,6 +3,7 @@ use utf8;
 use strict;
 use warnings;
 
+# source: RaceManager constructor
 my %levels = (
    'Human'      => [1, 25, 100, 250, 1000],
    'Orc'        => [1, 50, 250, 500, 2500],

@@ -16,6 +16,7 @@ my %slots = (
    'Body' => 'Armor',
 );
 
+# source: ItemUpgradeManager.GetEnhanceCost
 my %tier_mult = (
    1 => 1,
    2 => 8,
@@ -23,8 +24,8 @@ my %tier_mult = (
    4 => 22,
    5 => 42,
    6 => 86,
-   7 => 175,
-   8 => 420,
+   7 => 225,
+   8 => 750,
 );
 
 sub build {
@@ -278,6 +279,7 @@ sub enhance_cost {
    my $extra = ($enhance % 5) == 4;
    my $mul = 1;
    if ($rarity == 1) {
+      # source: ItemUpgradeManager.SetCommonEnhanceCost
       if ($enhance < 21) {
          if ($extra) {
             $mul = 1.25;
@@ -314,6 +316,7 @@ sub enhance_cost {
       $cost->{Bronze} = (151*$enhance + 1500) * $mul;
    }
    elsif ($rarity == 2) {
+      # source: ItemUpgradeManager.SetUncommonEnhanceCost
       if ($enhance < 21) {
          if ($extra) {
             $mul = 1.25;
@@ -350,6 +353,7 @@ sub enhance_cost {
       $cost->{Bronze} = (2*250*$enhance + 4500) * $mul;
    }
    elsif ($rarity == 3) {
+      # source: ItemUpgradeManager.SetRareEnhanceCost
       if ($enhance < 21) {
          if ($extra) {
             $mul = 1.25;
@@ -386,6 +390,7 @@ sub enhance_cost {
       $cost->{Bronze} = (3*1500*$enhance + 6500) * $mul;
    }
    elsif ($rarity == 4) {
+      # source: ItemUpgradeManager.SetEpicEnhanceCost
       if ($enhance < 21) {
          if ($extra) {
             $mul = 1.25;
@@ -422,6 +427,7 @@ sub enhance_cost {
       $cost->{Bronze} = (4*8670*$enhance + 85000) * $mul;
    }
    elsif ($rarity == 5) {
+      # source: ItemUpgradeManager.SetLegendEnhanceCost
       if ($enhance < 21) {
          if ($extra) {
             $mul = 1.25;

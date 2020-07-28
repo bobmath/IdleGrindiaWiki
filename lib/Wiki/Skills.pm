@@ -127,6 +127,7 @@ sub build {
          $txt = join(', ', $txt, @bonus);
          my $c = Grindia::numfmt($cost);
          push @rows, "|-\n| $i || {{Coin|$c}} || $txt\n";
+         # source: SkillMetaData.GetGoldCost
          $cost *= 2.1;
          if    ($i == 5)  { $cost *= 5 }
          elsif ($i == 10) { $cost *= 25 }

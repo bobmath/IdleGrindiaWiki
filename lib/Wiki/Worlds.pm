@@ -4,8 +4,9 @@ use strict;
 use warnings;
 use POSIX qw( ceil );
 
+# source: EnemySpawner.ApplyMonsterPartDrops and .GetMonsterDrops
 my @breakpoints = (10, 50, 100, 200, 350, 600, 900, 1500, 2500, 5000, 10000);
-my @jewelmult = (1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4096);
+my @jewelmult = (1, 3, 7, 15, 31, 63, 127, 255, 511, 1023, 2047, 4095);
 sub find_break {
    my ($lvl) = @_;
    my $lo = 0;

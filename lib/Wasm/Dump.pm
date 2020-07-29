@@ -156,13 +156,12 @@ sub elemsec {
 sub codesec {
    my ($wasm) = @_;
    open my $OUT, '>:utf8', $wasm->{dir} . 'code.txt' or return;
-   my $start = tell($wasm->{file});
    my $num = read_uint($wasm);
    my $first = $wasm->{firstfunc};
    for my $i ($first .. $first+$num-1) {
       my $len = read_uint($wasm);
       my $end = $len + tell($wasm->{file});
-      read_code($i, $wasm, $OUT, $end, $start);
+      read_code($i, $wasm, $OUT, $end);
       seek($wasm->{file}, $end, 0) or die;
    }
    close $OUT;
@@ -283,7 +282,7 @@ sub read_simple_type {
 }
 
 sub read_code {
-   my ($func_num, $wasm, $OUT, $end, $start) = @_;
+   my ($func_num, $wasm, $OUT, $end) = @_;
    my $line = "func $func_num";
    my $next_local = 0;
    if (my $func = $wasm->{funcs}[$func_num]) {
@@ -309,7 +308,7 @@ sub read_code {
    }
 
    my $disasm = Wasm::Disasm->new($OUT, $next_local);
-   $disasm->disassemble($wasm, $end, $start) or warn "func $func_num\n";
+   $disasm->disassemble($wasm, $end) or warn "func $func_num\n";
    print $OUT "\n";
 }
 

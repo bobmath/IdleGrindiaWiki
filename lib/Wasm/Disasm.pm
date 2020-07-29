@@ -65,104 +65,104 @@ sub disassemble {
       elsif ($bc == 0x42) { $self->iconst($wasm) }
       elsif ($bc == 0x43) { $self->f32const($wasm) }
       elsif ($bc == 0x44) { $self->f64const($wasm) }
-      elsif ($bc == 0x45) { $self->unop('!') }
-      elsif ($bc == 0x46) { $self->binop('==') }
-      elsif ($bc == 0x47) { $self->binop('!=') }
-      elsif ($bc == 0x48) { $self->binop('<') }
-      elsif ($bc == 0x49) { $self->binop('<.') } # unsigned
-      elsif ($bc == 0x4a) { $self->binop('>') }
-      elsif ($bc == 0x4b) { $self->binop('>.') } # unsigned
-      elsif ($bc == 0x4c) { $self->binop('<=') }
-      elsif ($bc == 0x4d) { $self->binop('<=.') } # unsigned
-      elsif ($bc == 0x4e) { $self->binop('>=') }
-      elsif ($bc == 0x4f) { $self->binop('>=.') } # unsigned
-      elsif ($bc == 0x50) { $self->unop('!') }
-      elsif ($bc == 0x51) { $self->binop('==') }
-      elsif ($bc == 0x52) { $self->binop('!=') }
-      elsif ($bc == 0x53) { $self->binop('<') }
-      elsif ($bc == 0x54) { $self->binop('<.') } # unsigned
-      elsif ($bc == 0x55) { $self->binop('>') }
-      elsif ($bc == 0x56) { $self->binop('>.') } # unsigned
-      elsif ($bc == 0x57) { $self->binop('<=') }
-      elsif ($bc == 0x58) { $self->binop('<=.') } # unsigned
-      elsif ($bc == 0x59) { $self->binop('>=') }
-      elsif ($bc == 0x5a) { $self->binop('>=.') } # unsigned
-      elsif ($bc == 0x5b) { $self->binop('==') }
-      elsif ($bc == 0x5c) { $self->binop('!=') }
-      elsif ($bc == 0x5d) { $self->binop('<') }
-      elsif ($bc == 0x5e) { $self->binop('>') }
-      elsif ($bc == 0x5f) { $self->binop('<=') }
-      elsif ($bc == 0x60) { $self->binop('>=') }
-      elsif ($bc == 0x61) { $self->binop('==') }
-      elsif ($bc == 0x62) { $self->binop('!=') }
-      elsif ($bc == 0x63) { $self->binop('<') }
-      elsif ($bc == 0x64) { $self->binop('>') }
-      elsif ($bc == 0x65) { $self->binop('<=') }
-      elsif ($bc == 0x66) { $self->binop('>=') }
-      elsif ($bc == 0x67) { $self->unop('clz') }
-      elsif ($bc == 0x68) { $self->unop('ctz') }
-      elsif ($bc == 0x69) { $self->unop('popcnt') }
-      elsif ($bc == 0x6a) { $self->binop('+') }
-      elsif ($bc == 0x6b) { $self->binop('-') }
-      elsif ($bc == 0x6c) { $self->binop('*') }
-      elsif ($bc == 0x6d) { $self->binop('/') }
-      elsif ($bc == 0x6e) { $self->binop('/.') } # unsigned
-      elsif ($bc == 0x6f) { $self->binop('%') }
-      elsif ($bc == 0x70) { $self->binop('%.') } # unsigned
-      elsif ($bc == 0x71) { $self->binop('&') }
-      elsif ($bc == 0x72) { $self->binop('|') }
-      elsif ($bc == 0x73) { $self->binop('^') }
-      elsif ($bc == 0x74) { $self->binop('<<') }
-      elsif ($bc == 0x75) { $self->binop('>>') }
-      elsif ($bc == 0x76) { $self->binop('>>.') } # unsigned
-      elsif ($bc == 0x77) { $self->binop('rotl') }
-      elsif ($bc == 0x78) { $self->binop('rotr') }
-      elsif ($bc == 0x79) { $self->unop('clz') }
-      elsif ($bc == 0x7a) { $self->unop('ctz') }
-      elsif ($bc == 0x7b) { $self->unop('popcnt') }
-      elsif ($bc == 0x7c) { $self->binop('+') }
-      elsif ($bc == 0x7d) { $self->binop('-') }
-      elsif ($bc == 0x7e) { $self->binop('*') }
-      elsif ($bc == 0x7f) { $self->binop('/') }
-      elsif ($bc == 0x80) { $self->binop('/.') } # unsigned
-      elsif ($bc == 0x81) { $self->binop('%') }
-      elsif ($bc == 0x82) { $self->binop('%.') } # unsigned
-      elsif ($bc == 0x83) { $self->binop('&') }
-      elsif ($bc == 0x84) { $self->binop('|') }
-      elsif ($bc == 0x85) { $self->binop('^') }
-      elsif ($bc == 0x86) { $self->binop('<<') }
-      elsif ($bc == 0x87) { $self->binop('>>') }
-      elsif ($bc == 0x88) { $self->binop('>>.') } # unsigned
-      elsif ($bc == 0x89) { $self->binop('rotl') }
-      elsif ($bc == 0x8a) { $self->binop('rotr') }
-      elsif ($bc == 0x8b) { $self->unop('abs') }
-      elsif ($bc == 0x8c) { $self->unop('-') }
-      elsif ($bc == 0x8d) { $self->unop('ceil') }
-      elsif ($bc == 0x8e) { $self->unop('floor') }
-      elsif ($bc == 0x8f) { $self->unop('trunc') }
-      elsif ($bc == 0x90) { $self->unop('nearest') }
-      elsif ($bc == 0x91) { $self->unop('sqrt') }
-      elsif ($bc == 0x92) { $self->binop('+') }
-      elsif ($bc == 0x93) { $self->binop('-') }
-      elsif ($bc == 0x94) { $self->binop('*') }
-      elsif ($bc == 0x95) { $self->binop('/') }
-      elsif ($bc == 0x96) { $self->binop('min') }
-      elsif ($bc == 0x97) { $self->binop('max') }
-      elsif ($bc == 0x98) { $self->binop('copysign') }
-      elsif ($bc == 0x99) { $self->unop('abs') }
-      elsif ($bc == 0x9a) { $self->unop('-') }
-      elsif ($bc == 0x9b) { $self->unop('ceil') }
-      elsif ($bc == 0x9c) { $self->unop('floor') }
-      elsif ($bc == 0x9d) { $self->unop('trunc') }
-      elsif ($bc == 0x9e) { $self->unop('nearest') }
-      elsif ($bc == 0x9f) { $self->unop('sqrt') }
-      elsif ($bc == 0xa0) { $self->binop('+') }
-      elsif ($bc == 0xa1) { $self->binop('-') }
-      elsif ($bc == 0xa2) { $self->binop('*') }
-      elsif ($bc == 0xa3) { $self->binop('/') }
-      elsif ($bc == 0xa4) { $self->binop('min') }
-      elsif ($bc == 0xa5) { $self->binop('max') }
-      elsif ($bc == 0xa6) { $self->binop('copysign') }
+      elsif ($bc == 0x45) { $self->unop('!') } # i32.eqz
+      elsif ($bc == 0x46) { $self->binop('==') } # i32.eq
+      elsif ($bc == 0x47) { $self->binop('!=') } # i32.ne
+      elsif ($bc == 0x48) { $self->binop('<') } # i32.lt_s
+      elsif ($bc == 0x49) { $self->binop('<.') } # i32.lt_u
+      elsif ($bc == 0x4a) { $self->binop('>') } # i32.gt_s
+      elsif ($bc == 0x4b) { $self->binop('>.') } # i32.gt_u
+      elsif ($bc == 0x4c) { $self->binop('<=') } # i32.le_s
+      elsif ($bc == 0x4d) { $self->binop('<=.') } # i32.le_u
+      elsif ($bc == 0x4e) { $self->binop('>=') } # i32.ge_s
+      elsif ($bc == 0x4f) { $self->binop('>=.') } # i32.ge_u
+      elsif ($bc == 0x50) { $self->unop('!') } # i64.eqz
+      elsif ($bc == 0x51) { $self->binop('==') } # i64.eq
+      elsif ($bc == 0x52) { $self->binop('!=') } # i64.ne
+      elsif ($bc == 0x53) { $self->binop('<') } # i64.lt_s
+      elsif ($bc == 0x54) { $self->binop('<.') } # i64.lt_u
+      elsif ($bc == 0x55) { $self->binop('>') } # i64.gt_s
+      elsif ($bc == 0x56) { $self->binop('>.') } # i64.gt_u
+      elsif ($bc == 0x57) { $self->binop('<=') } # i64.le_s
+      elsif ($bc == 0x58) { $self->binop('<=.') } # i64.le_u
+      elsif ($bc == 0x59) { $self->binop('>=') } # i64.ge_s
+      elsif ($bc == 0x5a) { $self->binop('>=.') } # i64.ge_u
+      elsif ($bc == 0x5b) { $self->binop('==') } # f32.eq
+      elsif ($bc == 0x5c) { $self->binop('!=') } # f32.ne
+      elsif ($bc == 0x5d) { $self->binop('<') } # f32.lt
+      elsif ($bc == 0x5e) { $self->binop('>') } # f32.gt
+      elsif ($bc == 0x5f) { $self->binop('<=') } # f32.le
+      elsif ($bc == 0x60) { $self->binop('>=') } # f32.ge
+      elsif ($bc == 0x61) { $self->binop('==') } # f64.eq
+      elsif ($bc == 0x62) { $self->binop('!=') } # f64.ne
+      elsif ($bc == 0x63) { $self->binop('<') } # f64.lt
+      elsif ($bc == 0x64) { $self->binop('>') } # f64.gt
+      elsif ($bc == 0x65) { $self->binop('<=') } # f64.le
+      elsif ($bc == 0x66) { $self->binop('>=') } # f64.ge
+      elsif ($bc == 0x67) { $self->unop('clz') } # i32.clz
+      elsif ($bc == 0x68) { $self->unop('ctz') } # i32.ctz
+      elsif ($bc == 0x69) { $self->unop('popcnt') } # i32.popcnt
+      elsif ($bc == 0x6a) { $self->binop('+') } # i32.add
+      elsif ($bc == 0x6b) { $self->binop('-') } # i32.sub
+      elsif ($bc == 0x6c) { $self->binop('*') } # i32.mul
+      elsif ($bc == 0x6d) { $self->binop('/') } # i32.div_s
+      elsif ($bc == 0x6e) { $self->binop('/.') } # i32.div_u
+      elsif ($bc == 0x6f) { $self->binop('%') } # i32.rem_s
+      elsif ($bc == 0x70) { $self->binop('%.') } # i32.rem_u
+      elsif ($bc == 0x71) { $self->binop('&') } # i32.and
+      elsif ($bc == 0x72) { $self->binop('|') } # i32.or
+      elsif ($bc == 0x73) { $self->binop('^') } # i32.xor
+      elsif ($bc == 0x74) { $self->binop('<<') } # i32.shl
+      elsif ($bc == 0x75) { $self->binop('>>') } # i32.shr_s
+      elsif ($bc == 0x76) { $self->binop('>>.') } # i32.shr_u
+      elsif ($bc == 0x77) { $self->binop('rotl') } # i32.rotl
+      elsif ($bc == 0x78) { $self->binop('rotr') } # i32.rotr
+      elsif ($bc == 0x79) { $self->unop('clz') } # i64.clz
+      elsif ($bc == 0x7a) { $self->unop('ctz') } # i64.ctz
+      elsif ($bc == 0x7b) { $self->unop('popcnt') } # i64.popcnt
+      elsif ($bc == 0x7c) { $self->binop('+') } # i64.add
+      elsif ($bc == 0x7d) { $self->binop('-') } # i64.sub
+      elsif ($bc == 0x7e) { $self->binop('*') } # i64.mul
+      elsif ($bc == 0x7f) { $self->binop('/') } # i64.div_s
+      elsif ($bc == 0x80) { $self->binop('/.') } # i64.div_u
+      elsif ($bc == 0x81) { $self->binop('%') } # i64.rem_s
+      elsif ($bc == 0x82) { $self->binop('%.') } # i64.rem_u
+      elsif ($bc == 0x83) { $self->binop('&') } # i64.and
+      elsif ($bc == 0x84) { $self->binop('|') } # i64.or
+      elsif ($bc == 0x85) { $self->binop('^') } # i64.xor
+      elsif ($bc == 0x86) { $self->binop('<<') } # i64.shl
+      elsif ($bc == 0x87) { $self->binop('>>') } # i64.shr_s
+      elsif ($bc == 0x88) { $self->binop('>>.') } # i64.shr_u
+      elsif ($bc == 0x89) { $self->binop('rotl') } # i64.rotl
+      elsif ($bc == 0x8a) { $self->binop('rotr') } # i64.rotr
+      elsif ($bc == 0x8b) { $self->unop('abs') } # f32.abs
+      elsif ($bc == 0x8c) { $self->unop('-') } # f32.neg
+      elsif ($bc == 0x8d) { $self->unop('ceil') } # f32.ceil
+      elsif ($bc == 0x8e) { $self->unop('floor') } # f32.floor
+      elsif ($bc == 0x8f) { $self->unop('trunc') } # f32.trunc
+      elsif ($bc == 0x90) { $self->unop('nearest') } # f32.nearest
+      elsif ($bc == 0x91) { $self->unop('sqrt') } # f32.sqrt
+      elsif ($bc == 0x92) { $self->binop('+') } # f32.add
+      elsif ($bc == 0x93) { $self->binop('-') } # f32.sub
+      elsif ($bc == 0x94) { $self->binop('*') } # f32.mul
+      elsif ($bc == 0x95) { $self->binop('/') } # f32.div
+      elsif ($bc == 0x96) { $self->binop('min') } # f32.min
+      elsif ($bc == 0x97) { $self->binop('max') } # f32.max
+      elsif ($bc == 0x98) { $self->binop('copysign') } # f32.copysign
+      elsif ($bc == 0x99) { $self->unop('abs') } # f64.abs
+      elsif ($bc == 0x9a) { $self->unop('-') } # f64.neg
+      elsif ($bc == 0x9b) { $self->unop('ceil') } # f64.ceil
+      elsif ($bc == 0x9c) { $self->unop('floor') } # f64.floor
+      elsif ($bc == 0x9d) { $self->unop('trunc') } # f64.trunc
+      elsif ($bc == 0x9e) { $self->unop('nearest') } # f64.nearest
+      elsif ($bc == 0x9f) { $self->unop('sqrt') } # f64.sqrt
+      elsif ($bc == 0xa0) { $self->binop('+') } # f64.add
+      elsif ($bc == 0xa1) { $self->binop('-') } # f64.sub
+      elsif ($bc == 0xa2) { $self->binop('*') } # f64.mul
+      elsif ($bc == 0xa3) { $self->binop('/') } # f64.div
+      elsif ($bc == 0xa4) { $self->binop('min') } # f64.min
+      elsif ($bc == 0xa5) { $self->binop('max') } # f64.max
+      elsif ($bc == 0xa6) { $self->binop('copysign') } # f64.copysign
       elsif ($bc == 0xa7) { $self->unop('i64_to_i32') } # i32.wrap_i64
       elsif ($bc == 0xa8) { $self->unop('f32_to_s32') } # i32.trunc_f32_s
       elsif ($bc == 0xa9) { $self->unop('f32_to_u32') } # i32.trunc_f32_u

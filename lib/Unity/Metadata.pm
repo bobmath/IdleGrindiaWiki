@@ -35,7 +35,7 @@ sub extract {
    write_records($metadir, 'typedefs', $meta->{typedefs});
    write_records($metadir, 'methods', $meta->{methods});
    write_records($metadir, 'specs', $meta->{meth_specs});
-   write_records($metadir, 'usage', $meta->{usage_lists});
+   write_records($metadir, 'usage', $meta->{meta_usage});
 }
 
 sub write_types {
@@ -53,8 +53,9 @@ sub write_types {
          foreach my $fld (@$fields) {
             my $type = $fld->{type};
             if (defined(my $val = $fld->{default})) {
-               if ($val =~ /[^\x21-\x7e]/) {
-                  $val =~ s/([^\x20-\x7e]|[\\"])/sprintf "\\x%02x", ord($1)/eg;
+               if ($val =~ /[\x00-\x20\x7f-\xa0]/) {
+                  $val =~ s{([\x00-\x1f\\"\x7f-\xa0])}
+                     {sprintf "\\x%02x", ord($1)}eg;
                   $val = qq["$val"];
                }
                $type .= ' = ' . $val;
@@ -189,6 +190,7 @@ sub read_code {
    seek($IN, 0, 0) or die $!;
    open my $OUT, '>:utf8', $dir . 'anno.txt'
       or die "Can't write ${dir}anno.txt: $!\n";
+   my $lookup = $meta->{usage_lookup};
    while (<$IN>) {
       chomp;
       if (/\b(?:func|call) (\d+)/) {
@@ -202,6 +204,15 @@ sub read_code {
       elsif (/\bglob(\d+)\b/) {
          my $glob = $globals{$1};
          $_ .= ' # ' . $glob if defined $glob;
+      }
+      while (/\bmem_i32\[(\d+)\]/g) {
+         my $val = $lookup->{$1} or next;
+         if ($val =~ /[\x00-\x20\x7f-\xa0]/) {
+            $val =~ s/([\x00-\x1f\\"\x7f-\xa0])/sprintf "\\x%02x", ord($1)/eg;
+            $val = qq["$val"];
+         }
+         $_ .= ' # ' . $val;
+         last;
       }
       print $OUT $_, "\n";
    }
@@ -231,10 +242,23 @@ sub read_usage {
       $ref->{name} = $type->{name} . '.' . $field->{name};
    }
 
+   my $table = $meta->{memtables}{meta_usages} or die;
+   my $dest_max = (length($meta->{mem}) - $table->{off}) >> 2;
+
    my $pairs = read_records($meta, 'usage_pairs', [
-      ['dest_idx', 'l'],
+      ['dest_idx', 'L'],
       ['src_idx', 'L'] ]);
+   my $usage = $meta->{meta_usage} = [];
    foreach my $pair (@$pairs) {
+      my $dest = $pair->{dest_idx};
+      $usage->[$dest] = $pair if $dest < $dest_max; # bogon filter
+   }
+
+   my @ptrs = unpack 'V*', substr($meta->{mem}, $table->{off}, @$usage << 2);
+
+   my $lookup = $meta->{usage_lookup} = {};
+   foreach my $pair (@$usage) {
+      next unless $pair;
       my $idx = $pair->{src_idx};
       my $type = $idx >> 29;
       $pair->{src_type} = $usage_type{$type};
@@ -260,15 +284,17 @@ sub read_usage {
          $src .= $spec->{method_sig} if $spec->{method_sig};
          $pair->{src} = $src;
       }
+      $pair->{ptr} = my $ptr = $ptrs[$pair->{dest_idx}];
+      $lookup->{$ptr} = $pair->{src} if $ptr;
    }
 
-   $meta->{usage_lists} = my $lists = read_records($meta, 'usage_lists', [
-      ['usage_start', 'l'],
-      ['usage_count', 'l'] ]);
-   foreach my $list (@$lists) {
-      $list->{usage} = get_slice($pairs,
-         $list->{usage_start}, $list->{usage_count});
-   }
+   #$meta->{usage_lists} = read_records($meta, 'usage_lists', [
+   #   ['usage_start', 'l'],
+   #   ['usage_count', 'l'] ]);
+   #foreach my $list (@$lists) {
+   #   $list->{usage} = get_slice($pairs,
+   #      $list->{usage_start}, $list->{usage_count});
+   #}
 }
 
 sub read_interfaces {

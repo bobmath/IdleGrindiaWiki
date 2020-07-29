@@ -13,11 +13,9 @@ sub new {
 }
 
 sub disassemble {
-   my ($self, $wasm, $end, $start) = @_;
-   $start //= 0;
-   my $bc = 0;
+   my ($self, $wasm, $end) = @_;
    while ($wasm->file_pos() < $end) {
-      $bc = $wasm->read_byte();
+      my $bc = $wasm->read_byte();
       if    ($bc == 0x00) { $self->stmt('unreachable') }
       elsif ($bc == 0x01) { $self->stmt('nop') }
       elsif ($bc == 0x02) { $self->block('block', $wasm) or last }
@@ -193,28 +191,39 @@ sub disassemble {
       else { last }
    }
    @{$self->{blocks}} = ();
-   $self->stmt(sprintf("err %02x %x", $bc, $wasm->file_pos() - $start), 1);
+   $self->stmt('err', 'all');
    return;
 }
 
 sub stmt {
-   my ($self, $stmt, $force) = @_;
+   my ($self, $stmt, $touch) = @_;
+   $touch ||= 'none';
    my $indent = '| ' x @{$self->{blocks}};
    my $file = $self->{file};
    foreach my $val (@{$self->{values}}) {
-      next if $val->{clean} && !$force;
+      next unless $val->{touch}{$touch} || $touch eq 'all';
       my $tmp = 'tmp' . $self->{temp}++;
       print $file $indent, "$tmp = $val->{val}\n";
       $val->{val} = $tmp;
       $val->{op} = 0;
-      $val->{clean} = 1;
+      $val->{touch} = {};
    }
    print $file $indent, $stmt, "\n" if $stmt;
 }
 
 sub push_val {
-   my ($self, $val, $op, $clean) = @_;
-   push @{$self->{values}}, { val=>$val, op=>$op, clean=>$clean };
+   my ($self, $val, @touch) = @_;
+   my %touch;
+   foreach my $touch (@touch) {
+      if (ref($touch) eq 'HASH') {
+         $touch{$_} = 1 foreach keys %$touch;
+      }
+      else {
+         $touch{$touch} = 1;
+      }
+   }
+   my $op = delete $touch{op};
+   push @{$self->{values}}, { val=>$val, op=>$op, touch=>\%touch };
 }
 
 sub pop_val {
@@ -225,12 +234,13 @@ sub pop_val {
 sub unop {
    my ($self, $op) = @_;
    my $x = $self->pop_val();
+   my $xv = $x->{val};
    if ($op =~ /^\w/) {
-      $self->push_val("$op($x->{val})");
+      $self->push_val("$op($xv)", $x->{touch});
    }
    else {
-      $x = $x->{op} ? "($x->{val})" : $x->{val};
-      $self->push_val($op.$x);
+      $xv = "($xv)" if $x->{op};
+      $self->push_val($op.$xv, $x->{touch});
    }
 }
 
@@ -238,28 +248,24 @@ sub binop {
    my ($self, $op) = @_;
    my $y = $self->pop_val();
    my $x = $self->pop_val();
+   my $xv = $x->{val};
+   my $yv = $y->{val};
    if ($op =~ /^\w/) {
-      $self->push_val("$op($x->{val},$y->{val})");
+      $self->push_val("$op($xv,$yv)", $x->{touch}, $y->{touch});
    }
    else {
-      $x = $x->{op} ? "($x->{val})" : $x->{val};
-      my $yv = $y->{val};
-      if ($op eq '+' && $yv =~ s/^-//) {
-         $op = '-';
-         $y = $yv;
+      $xv = "($xv)" if $x->{op};
+      if ($y->{op}) { $yv = "($yv)" }
+      elsif ($op eq '+' && $yv =~ s/^-//) { $op = '-' }
+      elsif ($op eq '-' && $yv =~ s/^-//) { $op = '+' }
+      if ($xv eq '0' && $op eq '-') {
+         $self->push_val("-$yv", $y->{touch});
       }
-      elsif ($op eq '-' && $yv =~ s/^-//) {
-         $op = '+';
-         $y = $yv;
-      }
-      else {
-         $y = $y->{op} ? "($yv)" : $yv;
-      }
-      if ($x eq '0' && $op eq '-') {
-         $self->push_val("-$y");
+      elsif ($xv eq '0' && $op eq '+') {
+         $self->push_val($yv, $y->{touch});
       }
       else {
-         $self->push_val("$x $op $y", 1);
+         $self->push_val("$xv $op $yv", 'op', $x->{touch}, $y->{touch});
       }
    }
 }
@@ -277,39 +283,39 @@ sub trinary {
    my $y = $self->pop_val()->{val};
    my $x = $self->pop_val()->{val};
    $self->stmt("$v = $c ? $x : $y");
-   $self->push_val($v, 0, 1);
+   $self->push_val($v);
 }
 
 sub iconst {
    my ($self, $wasm) = @_;
    my $val = $wasm->read_int();
-   $self->push_val($val, 0, 1);
+   $self->push_val($val);
 }
 
 sub f32const {
    my ($self, $wasm) = @_;
    my $val = sprintf '%.8g', unpack('f', $wasm->read_raw(4));
-   $self->push_val($val, 0, 1);
+   $self->push_val($val);
 }
 
 sub f64const {
    my ($self, $wasm) = @_;
    my $val = unpack('d', $wasm->read_raw(8));
-   $self->push_val($val, 0, 1);
+   $self->push_val($val);
 }
 
 sub get_local {
    my ($self, $wasm) = @_;
-   my $num = $wasm->read_uint();
-   $self->push_val("loc$num");
+   my $loc = 'loc' . $wasm->read_uint();
+   $self->push_val($loc, $loc);
 }
 
 sub set_local {
    my ($self, $wasm, $tee) = @_;
-   my $num = $wasm->read_uint();
+   my $loc = 'loc' . $wasm->read_uint();
    my $val = $self->pop_val()->{val};
-   $self->stmt("loc$num = $val");
-   $self->push_val("loc$num") if $tee;
+   $self->stmt("$loc = $val", $loc);
+   $self->push_val($loc, $loc) if $tee;
 }
 
 sub set_global {
@@ -318,7 +324,7 @@ sub set_global {
    my $val = $self->pop_val()->{val};
    my $glob = $wasm->{globals}[$num];
    my $name = ($glob && $glob->{name}) ? $glob->{name} : "glob$num";
-   $self->stmt("$name = $val");
+   $self->stmt("$name = $val", $name);
 }
 
 sub get_global {
@@ -326,7 +332,7 @@ sub get_global {
    my $num = $wasm->read_uint($wasm);
    my $glob = $wasm->{globals}[$num];
    my $name = ($glob && $glob->{name}) ? $glob->{name} : "glob$num";
-   $self->push_val($name);
+   $self->push_val($name, $name, 'memglob');
 }
 
 sub branch {
@@ -395,7 +401,7 @@ sub call {
    my $num = $wasm->read_uint();
    my $func = $wasm->{funcs}[$num];
    if (!$func) {
-      $self->stmt("call $num");
+      $self->stmt("call $num", 'memglob');
       @{$self->{values}} = ();
       return;
    }
@@ -415,7 +421,7 @@ sub call_ind {
 sub do_call {
    my ($self, $op, $name, $type) = @_;
    if (!$type || $type->{type} ne 'func') {
-      $self->stmt("$op $name");
+      $self->stmt("$op $name", 'memglob');
       @{$self->{values}} = ();
       return;
    }
@@ -430,9 +436,9 @@ sub do_call {
    my $stmt = '';
    $stmt .= join(',', @ret) . ' = ' if @ret;
    $stmt .= "$op $name (" . join(', ', reverse @args) . ')';
-   $self->stmt($stmt);
+   $self->stmt($stmt, 'memglob');
    foreach my $ret (@ret) {
-      $self->push_val($ret, 0, 1);
+      $self->push_val($ret);
    }
 }
 
@@ -450,7 +456,7 @@ sub block {
    my $lbl = $op . $self->{temp}++;
    $self->stmt($op eq 'loop' ? "do $lbl" : $op);
    if ($type eq 'null') { $type = '' }
-   else { $self->push_val($lbl, 0, 1) }
+   else { $self->push_val($lbl) }
    push @{$self->{blocks}}, {
       kind   => $op,
       type   => $type,
@@ -468,7 +474,7 @@ sub if_block {
    $self->stmt("if $val");
    my $lbl = 'if' . $self->{temp}++;
    if ($type eq 'null') { $type = '' }
-   else { $self->push_val($lbl, 0, 1) }
+   else { $self->push_val($lbl) }
    push @{$self->{blocks}}, {
       kind   => 'if',
       type   => $type,
@@ -487,9 +493,9 @@ sub else_block {
    return unless $blk->{kind} eq 'if';
    if ($blk->{type}) {
       my $val = $self->pop_val()->{val};
-      $self->stmt("$blk->{lbl} = $val", 1);
+      $self->stmt("$blk->{lbl} = $val", 'all');
    }
-   else { $self->stmt('', 1) }
+   else { $self->stmt('', 'all') }
    pop @$blocks;
    $self->stmt('else');
    push @$blocks, $blk;
@@ -503,10 +509,10 @@ sub end_block {
       my $blk = $blocks->[-1];
       if ($blk->{type}) {
          my $val = $self->pop_val()->{val};
-         $self->stmt("$blk->{lbl} = $val", 1);
+         $self->stmt("$blk->{lbl} = $val", 'all');
       }
       else {
-         $self->stmt('', 1);
+         $self->stmt('', 'all');
       }
       pop @$blocks;
       my $end = 'end';
@@ -518,7 +524,7 @@ sub end_block {
    else {
       my $val = pop @{$self->{values}};
       $self->stmt("return $val->{val}") if $val;
-      $self->stmt("end", 1);
+      $self->stmt('end', 'all');
       return 1;
    }
 }
@@ -526,7 +532,8 @@ sub end_block {
 sub mem_size {
    my ($self, $wasm) = @_;
    $wasm->read_byte() == 0 or return;
-   $self->push_val('mem.size');
+   my $op = 'mem.size';
+   $self->push_val($op, $op);
    return 1;
 }
 
@@ -534,7 +541,7 @@ sub mem_grow {
    my ($self, $wasm) = @_;
    $wasm->read_byte() == 0 or return;
    my $val = $self->pop_val()->{val};
-   $self->stmt("mem.grow $val");
+   $self->stmt("mem.grow $val", 'mem.size');
    return 1;
 }
 
@@ -549,7 +556,7 @@ sub load {
       $loc = $addr->{op} ? "($loc)" : $loc;
       $loc .= '+' . $off;
    }
-   $self->push_val("mem_$type\[$loc]");
+   $self->push_val("mem_$type\[$loc]", 'mem', 'memglob', $addr->{touch});
 }
 
 sub store {
@@ -564,7 +571,7 @@ sub store {
       $loc = $addr->{op} ? "($loc)" : $loc;
       $loc .= '+' . $off;
    }
-   $self->stmt("mem_$type\[$loc] = $val");
+   $self->stmt("mem_$type\[$loc] = $val", 'mem');
 }
 
 1 # end Wasm::Disasm

@@ -164,7 +164,7 @@ sub read_code {
       if (defined(my $ptr = $meth->{method_ptr})) {
          my $num = $dyncalls{$meth->{shortsig}}[$ptr] or next;
          $meth->{method_num} = $num;
-         push @{$funcs{$num}}, $meth->{_owner} . '.' . $meth->{name};
+         push @{$funcs{$num}}, $meth->{fullname};
       }
       my $inst = $meth->{instants} or next;
       foreach my $sig (sort keys %$inst) {
@@ -248,34 +248,14 @@ sub read_code {
    close $IN;
 }
 
-my %usage_type = (
-   1 => 'type_info',
-   2 => 'il2cpp_type',
-   3 => 'method',
-   4 => 'field',
-   5 => 'string',
-   6 => 'gen_method',
-);
-
 sub read_usage {
    my ($meta) = @_;
-
-   my $field_refs = read_records($meta, 'field_refs', [
-      ['type_idx', 'l'],
-      ['field_idx', 'l'] ]);
-   foreach my $ref (@$field_refs) {
-      my $info = $meta->{typeinfo}[$ref->{type_idx}] or next;
-      my $type = $meta->{typedefs}[$info->{idx}] or next;
-      my $field = $type->{fields}[$ref->{field_idx}] or next;
-      $ref->{name} = $type->{name} . '.' . $field->{name};
-   }
-
    my $table = $meta->{memtables}{meta_usages} or die;
    my $dest_max = (length($meta->{mem}) - $table->{off}) >> 2;
 
    my $pairs = read_records($meta, 'usage_pairs', [
       ['dest_idx', 'L'],
-      ['src_idx', 'L'] ]);
+      ['ref_idx', 'L'] ]);
    my $usage = $meta->{meta_usage} = [];
    foreach my $pair (@$pairs) {
       my $dest = $pair->{dest_idx};
@@ -287,33 +267,9 @@ sub read_usage {
    my $lookup = $meta->{usage_lookup} = {};
    foreach my $pair (@$usage) {
       next unless $pair;
-      my $idx = $pair->{src_idx};
-      my $type = $idx >> 29;
-      $pair->{src_type} = $usage_type{$type};
-      $pair->{src_idx} = $idx &= 0x1fffffff;
-      if ($type == 1 || $type == 2) {
-         $pair->{src} = $meta->{typenames}[$idx];
-      }
-      elsif ($type == 3) {
-         my $meth = $meta->{methods}[$idx] or next;
-         $pair->{src} = $meth->{_owner} . '.' . $meth->{name};
-      }
-      elsif ($type == 4) {
-         $pair->{src} = $field_refs->[$idx]{name};
-      }
-      elsif ($type == 5) {
-         $pair->{src} = $meta->{ustrings}{$idx};
-      }
-      elsif ($type == 6) {
-         my $spec = $meta->{meth_specs}[$idx] or next;
-         my $src = $spec->{class};
-         $src .= $spec->{class_sig} if $spec->{class_sig};
-         $src .= '.' . $spec->{method};
-         $src .= $spec->{method_sig} if $spec->{method_sig};
-         $pair->{src} = $src;
-      }
+      decode_ref($meta, $pair);
       $pair->{ptr} = my $ptr = $ptrs[$pair->{dest_idx}];
-      $lookup->{$ptr} = $pair->{src} if $ptr;
+      $lookup->{$ptr} = $pair->{ref} if $ptr;
    }
 
    #$meta->{usage_lists} = read_records($meta, 'usage_lists', [
@@ -323,6 +279,43 @@ sub read_usage {
    #   $list->{usage} = get_slice($pairs,
    #      $list->{usage_start}, $list->{usage_count});
    #}
+}
+
+my %ref_type = (
+   1 => 'type_info',
+   2 => 'il2cpp_type',
+   3 => 'method',
+   4 => 'field',
+   5 => 'string',
+   6 => 'gen_method',
+);
+
+sub decode_ref {
+   my ($meta, $rec) = @_;
+   my $idx = $rec->{ref_idx};
+   my $type = $idx >> 29;
+   $rec->{ref_type} = $ref_type{$type};
+   $rec->{ref_idx} = $idx &= 0x1fffffff;
+   if ($type == 1 || $type == 2) {
+      $rec->{ref} = $meta->{typenames}[$idx];
+   }
+   elsif ($type == 3) {
+      $rec->{ref} = $meta->{methods}[$idx]{fullname};
+   }
+   elsif ($type == 4) {
+      $rec->{ref} = $meta->{field_refs}[$idx]{name};
+   }
+   elsif ($type == 5) {
+      $rec->{ref} = $meta->{ustrings}{$idx};
+   }
+   elsif ($type == 6) {
+      my $spec = $meta->{meth_specs}[$idx] or next;
+      my $ref = $spec->{class};
+      $ref .= $spec->{class_sig} if $spec->{class_sig};
+      $ref .= '.' . $spec->{method};
+      $ref .= $spec->{method_sig} if $spec->{method_sig};
+      $rec->{ref} = $ref;
+   }
 }
 
 sub read_rgctx {
@@ -349,11 +342,9 @@ sub read_rgctx {
 sub read_vtables {
    my ($meta) = @_;
    my $vtables = read_records($meta, 'vtables', [
-      ['idx', 'L'] ]);
-   foreach my $ent (@$vtables) {
-      $ent->{type} = $ent->{idx} >> 29;
-      # 1: class, 2: type, 3: method, 4: field, 5: string, 6: methodref
-      $ent->{idx} &= 0x1fffffff;
+      ['ref_idx', 'L'] ]);
+   foreach my $rec (@$vtables) {
+      decode_ref($meta, $rec);
    }
    foreach my $type (@{$meta->{typedefs}}) {
       $type->{vtable} = get_slice($vtables,
@@ -532,6 +523,7 @@ sub read_methods {
          my $meth = $methods->[$idx] or die;
          $meth->{_owner_idx} = $type_idx;
          $meth->{_owner} = $type_name;
+         $meth->{fullname} = $type_name . '.' . $meth->{name};
       }
    }
 }
@@ -976,6 +968,16 @@ sub read_fields {
       }
       $type->{fields} = get_slice($fields,
          $type->{field_start}, $type->{field_count});
+   }
+
+   $meta->{field_refs} = my $field_refs = read_records($meta, 'field_refs', [
+      ['type_idx', 'l'],
+      ['field_idx', 'l'] ]);
+   foreach my $ref (@$field_refs) {
+      my $info = $meta->{typeinfo}[$ref->{type_idx}] or next;
+      my $type = $meta->{typedefs}[$info->{idx}] or next;
+      my $field = $type->{fields}[$ref->{field_idx}] or next;
+      $ref->{name} = $type->{name} . '.' . $field->{name};
    }
 }
 

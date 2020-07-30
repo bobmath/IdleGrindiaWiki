@@ -28,6 +28,8 @@ sub extract {
    get_interop($meta);
    read_defaults($meta);
    read_usage($meta);
+   read_rgctx($meta);
+   read_vtables($meta);
    read_code($meta, $codedir);
    write_types($meta, 'types.txt');
    write_record($metadir . 'memtables.txt', $meta->{memtables});
@@ -321,6 +323,42 @@ sub read_usage {
    #   $list->{usage} = get_slice($pairs,
    #      $list->{usage_start}, $list->{usage_count});
    #}
+}
+
+sub read_rgctx {
+   my ($meta) = @_;
+   my $rgctx = read_records($meta, 'rgctx', [
+      ['type', 'l'], # 1=type, 2=class, 3=method
+      ['index', 'l'] ]);
+   foreach my $rec (@$rgctx) {
+      my $type = $rec->{type};
+      if ($type == 1 || $type == 2) {
+         $rec->{class} = $meta->{typenames}[$rec->{index}];
+      }
+   }
+   foreach my $type (@{$meta->{typedefs}}) {
+      $type->{rgctx} = get_slice($rgctx,
+         $type->{rgctx_start}, $type->{rgctx_count});
+   }
+   foreach my $meth (@{$meta->{methods}}) {
+      $meth->{rgctx} = get_slice($rgctx,
+         $meth->{rgctx_start}, $meth->{rgctx_count});
+   }
+}
+
+sub read_vtables {
+   my ($meta) = @_;
+   my $vtables = read_records($meta, 'vtables', [
+      ['idx', 'L'] ]);
+   foreach my $ent (@$vtables) {
+      $ent->{type} = $ent->{idx} >> 29;
+      # 1: class, 2: type, 3: method, 4: field, 5: string, 6: methodref
+      $ent->{idx} &= 0x1fffffff;
+   }
+   foreach my $type (@{$meta->{typedefs}}) {
+      $type->{vtable} = get_slice($vtables,
+         $type->{vtable_start}, $type->{vtable_count});
+   }
 }
 
 sub read_interfaces {

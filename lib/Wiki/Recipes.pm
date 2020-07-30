@@ -233,6 +233,7 @@ sub show_enhance {
    for my $rarity (1 .. 5) {
       print $OUT qq[|- valign="top"\n],
          "| $rarity_name[$rarity]<br>$tier-$rarity\n";
+      # source: ItemUpgradeManager.GetEnhanceCost
       my $gem_tier = $tier;
       if ($tier == 2) {
          $gem_tier-- if $rarity <= 2;

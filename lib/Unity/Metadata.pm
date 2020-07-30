@@ -188,6 +188,30 @@ sub read_code {
       }
    }
 
+   foreach my $addr (keys %funcs) {
+      my $names = $funcs{$addr};
+      if (@$names > 2) {
+         my %short;
+         foreach my $name (@$names) {
+            my $short = $name;
+            $short =~ s/<.*>/<*>/;
+            push @{$short{$short}}, $name;
+         }
+         if (keys(%short) < @$names) {
+            @$names = ();
+            while (my ($k, $v) = each %short) {
+               push @$names, @$v > 1 ? $k : $v->[0];
+            }
+         }
+      }
+      @$names = sort @$names;
+      if (@$names > 10) {
+         splice @$names, 10;
+         push @$names, '...';
+      }
+      $funcs{$addr} = join ', ', @$names;
+   }
+
    print "Annotating code\n";
    seek($IN, 0, 0) or die $!;
    open my $OUT, '>:utf8', $dir . 'anno.txt'
@@ -196,14 +220,12 @@ sub read_code {
    while (<$IN>) {
       chomp;
       if (/\b(?:func|call) (\d+)/) {
-         my $names = $funcs{$1};
-         $_ .= ' # ' . join(', ', @$names) if $names;
+         my $name = $funcs{$1};
+         $_ .= ' # ' . $name if defined $name;
       }
       elsif (/\binvoke_(\w+) \((\d+)/) {
-         if (my $addr = $dyncalls{$1}[$2]) {
-            my $names = $funcs{$addr};
-            $_ .= ' # ' . ($names ? join(', ', @$names) : $addr);
-         }
+         my $addr = $dyncalls{$1}[$2];
+         $_ .= ' # ' . ($funcs{$addr} // $addr) if defined $addr;
       }
       elsif (/\bglob(\d+)\b/) {
          my $glob = $globals{$1};
@@ -506,8 +528,10 @@ sub read_params {
       $sig .= 'i' unless $meth->{static};
       $meth->{params} = my $args = get_slice($params,
          $meth->{param_start}, $meth->{param_count});
-      foreach my $arg (@$args) {
-         $sig .= $typechars{$arg->{type}} || 'i';
+      if ($args) {
+         foreach my $arg (@$args) {
+            $sig .= $typechars{$arg->{type}} || 'i';
+         }
       }
       $sig .= 'i';
       $meth->{shortsig} = $sig;

@@ -160,18 +160,17 @@ sub read_code {
    my %funcs;
    foreach my $meth (@{$meta->{methods}}) {
       if (defined(my $ptr = $meth->{method_ptr})) {
-         my $num = $dyncalls{$meth->{shortsig}}[$ptr];
+         my $num = $dyncalls{$meth->{shortsig}}[$ptr] or next;
          $meth->{method_num} = $num;
-         $funcs{$num} = $meth->{_owner} . '.' . $meth->{name}
-            if defined $num;
+         push @{$funcs{$num}}, $meth->{_owner} . '.' . $meth->{name};
       }
       my $inst = $meth->{instants} or next;
       foreach my $sig (sort keys %$inst) {
          my $info = $inst->{$sig};
-         my $num = $dyncalls{$info->{shortsig}}[$info->{method_ptr}];
+         my $num = $dyncalls{$info->{shortsig}}[$info->{method_ptr}] or next;
          $info->{method_num} = $num;
-         $funcs{$num} = $meth->{_owner} . '.' . $meth->{basename} . $sig
-            if defined $num;
+         push @{$funcs{$num}},
+            $meth->{_owner} . '.' . $meth->{basename} . $sig;
       }
    }
 
@@ -181,10 +180,10 @@ sub read_code {
          my $methods = $inst->{$sig};
          foreach my $name (sort keys %{$methods}) {
             my $info = $methods->{$name};
-            my $num = $dyncalls{$info->{shortsig}}[$info->{method_ptr}];
+            my $num = $dyncalls{$info->{shortsig}}[$info->{method_ptr}]
+               or next;
             $info->{method_num} = $num;
-            $funcs{$num} = $type->{basename} . $sig . '.' . $name
-               if defined $num;
+            push @{$funcs{$num}}, $type->{basename} . $sig . '.' . $name;
          }
       }
    }
@@ -197,12 +196,14 @@ sub read_code {
    while (<$IN>) {
       chomp;
       if (/\b(?:func|call) (\d+)/) {
-         my $name = $funcs{$1};
-         $_ .= ' # ' . $name if defined $name;
+         my $names = $funcs{$1};
+         $_ .= ' # ' . join(', ', @$names) if $names;
       }
       elsif (/\binvoke_(\w+) \((\d+)/) {
-         my $func = $dyncalls{$1}[$2];
-         $_ .= ' # ' . ($funcs{$func} // $func) if defined $func;
+         if (my $addr = $dyncalls{$1}[$2]) {
+            my $names = $funcs{$addr};
+            $_ .= ' # ' . ($names ? join(', ', @$names) : $addr);
+         }
       }
       elsif (/\bglob(\d+)\b/) {
          my $glob = $globals{$1};

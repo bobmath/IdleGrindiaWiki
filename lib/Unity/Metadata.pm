@@ -85,8 +85,11 @@ sub write_types {
       if ($methods) {
          print $OUT "methods:\n";
          foreach my $meth (@$methods) {
-            printf $OUT "  %-16s  %s  %d\n", $meth->{name},
-               $meth->{return_type}, $meth->{method_num} // -1;
+            my $type = $meth->{return_type};
+            $type .= '  static' if $meth->{static};
+            $type .= '  virtual' if $meth->{virtual};
+            printf $OUT "  %-16s  %s  %d\n", $meth->{name}, $type,
+               $meth->{method_num} // -1;
             my $params = $meth->{params} or next;
             foreach my $param (@$params) {
                printf $OUT "    %-16s  %s\n", $param->{name}, $param->{type};
@@ -437,6 +440,7 @@ sub read_methods {
       $meth->{declaring_type} =
          $meta->{typedefs}[$meth->{declaring_type_idx}]{name};
       $meth->{static} = 1 if $meth->{flags} & 0x10;
+      $meth->{virtual} = 1 if $meth->{flags} & 0x40;
       # 0x0007: access
       # 0x0008: unmanaged export
       # 0x0010: static
@@ -456,7 +460,6 @@ sub read_methods {
       # 0x0004: unmanaged
       # 0x0010: forward ref
       # 0x0020: synchronized
-      # 0x1000: static?
    }
 
    foreach my $type (@{$meta->{typedefs}}) {

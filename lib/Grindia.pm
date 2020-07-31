@@ -149,7 +149,7 @@ $loaders{DungeonMetaData} = sub {
    $obj->{crafting_reward2} = $bytes->read_double_array();
    $obj->{crafting_reward3} = $bytes->read_double_array();
    $obj->{resource_rewards} = $bytes->read_double_array();
-   $obj->{select_2level_range} = $bytes->read_double_array();
+   $obj->{accessory_level_range} = $bytes->read_double_array();
    $obj->{shard_drops} = $bytes->read_double_array();
    $obj->{artifact_drops} = $bytes->read_double_array();
 };

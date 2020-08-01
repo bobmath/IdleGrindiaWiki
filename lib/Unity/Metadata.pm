@@ -447,7 +447,7 @@ sub read_defaults {
          $val = unpack('Q<', substr($data, $off, 8));
       }
       elsif ($type eq 'System.Single') {
-         $val = unpack('f<', substr($data, $off, 4));
+         $val = sprintf '%.8g', unpack('f<', substr($data, $off, 4));
       }
       elsif ($type eq 'System.Double') {
          $val = unpack('d<', substr($data, $off, 8));

@@ -12,6 +12,7 @@ sub extract {
    read_meta($meta, $metafile);
    read_strings($meta);
    read_typedefs($meta);
+   read_nested_types($meta);
    read_methods($meta);
    read_mem($meta, $codedir . 'mem0');
    find_typeinfo($meta);
@@ -20,7 +21,6 @@ sub extract {
    read_interfaces($meta);
    read_fields($meta);
    read_events($meta);
-   read_nested_types($meta);
    read_params($meta);
    read_properties($meta);
    get_gen_methods($meta);
@@ -47,7 +47,10 @@ sub write_types {
       print $OUT "name: $type->{name}\n";
       print $OUT "parent: $type->{parent_type}\n" if $type->{parent_type};
       if (my $interfaces = $type->{interfaces}) {
-         print $OUT "interface: @$interfaces\n";
+         print $OUT "interfaces: @$interfaces\n";
+      }
+      if (my $nested = $type->{nested_types}) {
+         print $OUT "nested types: @$nested\n";
       }
 
       if (my $fields = $type->{fields}) {
@@ -1006,13 +1009,38 @@ sub read_nested_types {
    my ($meta) = @_;
    my $typedefs = $meta->{typedefs} or die;
    my $nested_types = read_ints($meta, 'nested_types');
-   for my $idx (@$nested_types) {
-      $idx = $typedefs->[$idx]{name};
-   }
+   my @nested;
    foreach my $type (@$typedefs) {
-      $type->{nested_types} = get_slice($nested_types,
-         $type->{nested_type_start}, $type->{nested_type_count});
+      $type->{nested_types} = my $nested = get_slice($nested_types,
+         $type->{nested_type_start}, $type->{nested_type_count}) or next;
+      push @nested, $nested;
+      foreach my $id (@$nested) {
+         my $ntype = $typedefs->[$id] or next;
+         $ntype->{nested_in} = $type->{_num};
+      }
    }
+   my $seen = {};
+   foreach my $nested (@nested) {
+      foreach my $id (@$nested) {
+         $id = nested_name($id, $typedefs, $seen);
+      }
+   }
+}
+
+sub nested_name {
+   my ($id, $typedefs, $seen) = @_;
+   return '?' unless defined $id;
+   my $name = $seen->{$id};
+   return $name if defined $name;
+   my $type = $typedefs->[$id] or return '?';
+   my $outer = $type->{nested_in};
+   if (defined $outer) {
+      $seen->{$id} = '?'; # avoid unterminated recursion
+      $name = nested_name($outer, $typedefs, $seen);
+      $type->{basename} = $name . ':' . $type->{basename};
+      $type->{name} = $name . ':' . $type->{name};
+   }
+   return $seen->{$id} = $type->{name};
 }
 
 sub read_properties {

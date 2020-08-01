@@ -12,12 +12,12 @@ sub extract {
    read_meta($meta, $metafile);
    read_strings($meta);
    read_typedefs($meta);
-   read_nested_types($meta);
    read_methods($meta);
    read_mem($meta, $codedir . 'mem0');
    find_typeinfo($meta);
    find_codeinfo($meta);
    read_generics($meta);
+   read_nested_types($meta);
    read_interfaces($meta);
    read_fields($meta);
    read_events($meta);

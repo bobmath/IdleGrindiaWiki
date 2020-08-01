@@ -47,10 +47,12 @@ sub write_types {
       print $OUT "name: $type->{name}\n";
       print $OUT "parent: $type->{parent_type}\n" if $type->{parent_type};
       if (my $interfaces = $type->{interfaces}) {
-         print $OUT "interfaces: @$interfaces\n";
+         print $OUT "interfaces:\n";
+         print $OUT "  $_\n" foreach @$interfaces;
       }
       if (my $nested = $type->{nested_types}) {
-         print $OUT "nested types: @$nested\n";
+         print $OUT "nested types:\n";
+         print $OUT "  $_\n" foreach @$nested;
       }
 
       if (my $fields = $type->{fields}) {
@@ -58,7 +60,7 @@ sub write_types {
          foreach my $fld (@$fields) {
             my $type = $fld->{type};
             if (defined(my $val = $fld->{default})) {
-               if ($val =~ /[\x00-\x20\x7f-\xa0]/) {
+               if ($val =~ /[^-+.\w]/) {
                   $val =~ s{([\x00-\x1f\\"\x7f-\xa0])}
                      {sprintf "\\x%02x", ord($1)}eg;
                   $val = qq["$val"];

@@ -34,6 +34,7 @@ sub build {
       }
    }
    show_pets(\%shards);
+   show_timers(\%dungeons);
 }
 
 sub show_dungeon {
@@ -138,6 +139,38 @@ sub show_pets {
          print $OUT "$petname W$world @out2\n" if @out2;
       }
    }
+   close $OUT;
+}
+
+sub show_timers {
+   my ($dungeons) = @_;
+   open my $OUT, '>', 'wiki/Dungeons/Timers' or return;
+   print $OUT qq[{| class="wikitable"\n|-\n],
+      "! Tier || [[File:Clock.png]] Dungeon || [[File:Clock.png]] Raid \n";
+   foreach my $tier (1 .. 8) {
+      print $OUT "|-\n| $tier";
+      foreach my $type (qw[ Dungeon Raid ]) {
+         my $time = $dungeons->{1}{$type}{$tier}{max_time} or die;
+         foreach my $world (2 .. 7) {
+            my $dung = $dungeons->{$world}{$type}{$tier} or next;
+            die "time different W$world T$tier $type"
+               unless $dung->{max_time} == $time;
+         }
+         my $mins = $time / 60;
+         my $hrs = int($mins / 60);
+         $mins = int($mins - 60*$hrs + 0.5);
+         if ($hrs) {
+            $time = "$hrs hr";
+            $time .= " $mins min" if $mins;
+         }
+         else {
+            $time = "$mins min";
+         }
+         print $OUT " || $time";
+      }
+      print $OUT "\n";
+   }
+   print $OUT qq[|}\n];
    close $OUT;
 }
 

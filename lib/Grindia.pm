@@ -152,6 +152,10 @@ $loaders{DungeonMetaData} = sub {
    $obj->{accessory_level_range} = $bytes->read_double_array();
    $obj->{shard_drops} = $bytes->read_double_array();
    $obj->{artifact_drops} = $bytes->read_double_array();
+   $obj->{curr_time} = $bytes->read_double();
+   $obj->{last_time} = $bytes->read_double();
+   $obj->{max_time} = $bytes->read_double();
+   $obj->{fail_time} = $bytes->read_double();
 };
 
 $loaders{EnemyData} = sub {

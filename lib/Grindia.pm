@@ -203,13 +203,14 @@ $loaders{ItemBonusData} = sub {
    # type: 0=BASE_ATTACK, 1=FLAT_STATS, 2=SPECIAL_EFFECT_AUTO_ATTACK,
    # 3=SPECIAL_EFFECT_ON_HIT, 4=SPECIAL_EFFECT_ON_START
    $obj->{power} = $bytes->read_double();
-   $obj->{stats} = $bytes->read_double_array(24);
+   $obj->{stats} = $bytes->read_double_array(30);
 };
 
 $loaders{ItemFactoryBonusData} = sub {
    my ($obj, $bytes, $bun, $ctx) = @_;
    $bytes->skip(32);
-   $obj->{"tier$_"} = $bun->read_obj_array($bytes, $ctx) for 1 .. 8;
+   $obj->{"tier$_"} = $bun->read_obj_array($bytes, $ctx) for 1 .. 10;
+   $obj->{"oldtier$_"} = $bun->read_obj_array($bytes, $ctx) for 1 .. 8;
    $obj->{"old$_"} = $bun->read_obj_array($bytes, $ctx) for 1 .. 4;
 };
 

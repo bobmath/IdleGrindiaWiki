@@ -3,31 +3,40 @@ use utf8;
 use strict;
 use warnings;
 
+my %skill_map = (
+   '1H 01 Jumping Slash Stats' => 'Jumping Slash',
+   '1H 02 First Aid Stats' => 'First Aid',
+   '1H 03 Break Weapon Stats' => 'Break Weapon',
+   '1H 04 Break Armor Stats' => 'Break Armor',
+   'MR 01 Fireball Stats' => 'Fireball',
+   'MR 02 Cure Stats' => 'Cure Spell',
+   'MR 03 Ice Armor Stats' => 'Ice Armor',
+   'MR 04 Thunder Armor Stats' => 'Thunder Armor',
+   '01 Health Stats' => 'Vitality',
+   '02 Defense Stats' => 'Survival',
+   '03 Shields Stats' => 'Unstoppable',
+   '04 Basic Phys Attack Stats' => 'Combat Basics',
+   '05 Intermediate Phys Attack Stats' => 'Military Training',
+   '06 Advanced Phys Attack Stats' => 'Bushido',
+   '07 Basic Mag Attack Stats' => 'Prestidigitation',
+   '08 Intermediate Mag Attack Stats' => 'Arcane Magic',
+   '09 Advanced Mag Attack Stats' => 'Dark Arts',
+   '01 Speed 1 Stats' => 'Walking',
+   '04 Critical 1 Stats' => 'Crits',
+);
+
+my @statnames = ( 'HP', 'STR', 'INT', 'END', 'WIS', 'SPD',
+   'Crit Chance', 'Crit Damage', 'Crit Resist', 'Crit Armor',
+   'Physical Penetration', 'Magical Penetration',
+   'Debuff Accuracy', 'Debuff Resist',
+   'Block', 'Resist', 'Dodge', 'starting Shield', 'First Strike',
+   'HP', 'STR', 'INT', 'END', 'WIS' # percentage increase
+);
+
+
 sub build {
    my ($ctx) = @_;
    open my $OUT , '>:utf8', 'wiki/Skills' or die;
-
-   my %skill_map = (
-      '1H 01 Jumping Slash Stats' => 'Jumping Slash',
-      '1H 02 First Aid Stats' => 'First Aid',
-      '1H 03 Break Weapon Stats' => 'Break Weapon',
-      '1H 04 Break Armor Stats' => 'Break Armor',
-      'MR 01 Fireball Stats' => 'Fireball',
-      'MR 02 Cure Stats' => 'Cure Spell',
-      'MR 03 Ice Armor Stats' => 'Ice Armor',
-      'MR 04 Thunder Armor Stats' => 'Thunder Armor',
-      '01 Health Stats' => 'Vitality',
-      '02 Defense Stats' => 'Survival',
-      '03 Shields Stats' => 'Unstoppable',
-      '04 Basic Phys Attack Stats' => 'Combat Basics',
-      '05 Intermediate Phys Attack Stats' => 'Military Training',
-      '06 Advanced Phys Attack Stats' => 'Bushido',
-      '07 Basic Mag Attack Stats' => 'Prestidigitation',
-      '08 Intermediate Mag Attack Stats' => 'Arcane Magic',
-      '09 Advanced Mag Attack Stats' => 'Dark Arts',
-      '01 Speed 1 Stats' => 'Walking',
-      '04 Critical 1 Stats' => 'Crits',
-   );
 
    my %active;
    $ctx->for_type('ActiveSkillData', sub {
@@ -35,14 +44,6 @@ sub build {
       my $name = $skill_map{$obj->{name}} or return;
       $active{$name} = $obj;
    });
-
-   my @statnames = ( 'HP', 'STR', 'INT', 'END', 'WIS', 'SPD',
-      'Crit Chance', 'Crit Damage', 'Crit Resist', 'Crit Armor',
-     'Physical Penetration', 'Magical Penetration',
-     'Debuff Accuracy', 'Debuff Resist',
-     'Block', 'Resist', 'Dodge', 'starting Shield', 'First Strike',
-     'HP', 'STR', 'INT', 'END', 'WIS' # percentage increase
-   );
 
    my %passive;
    $ctx->for_type('StatPassiveSkillData', sub {

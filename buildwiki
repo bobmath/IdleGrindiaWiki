@@ -17,8 +17,8 @@ Unity::UnityFS::extract("$dir/data.unity3d", $dir);
 my $ctx = Grindia::get_context($dir);
 mkdir 'wiki';
 
-for my $pkg (qw[ Artifacts Dungeons Enemies Heroes Pets Prestige Quests
-   Recipes Skills Trials Worlds ])
+for my $pkg (qw[ Artifacts Dungeons Enemies Heroes ItemBonuses Pets Prestige
+   Quests Recipes Skills Trials Worlds ])
 {
    print "Writing $pkg\n";
    require "Wiki/$pkg.pm";

@@ -28,6 +28,7 @@ my %upgrade_cost = (
    5 => [['Jewel|8|1', 7470]],
 );
 my %level_cost = (
+   0  => 1,
    21 => 1.2,
    59 => 1.3,
    119 => 1.4,
@@ -52,9 +53,15 @@ sub build {
    open my $OUT, '>:utf8', 'wiki/Forge/Item_bonuses' or die;
 
    print $OUT qq[{| class="wikitable"\n],
-      "|-\n! Item Level || Cost Multiplier\n";
-   foreach my $lvl (sort { $a <=> $b } keys %level_cost) {
-      print $OUT "|-\n| ", ($lvl+1), " || ", $level_cost{$lvl}, "\n";
+      "|-\n! Item Level || Item Tier || Cost Multiplier\n";
+   {
+      my $mult = 1;
+      my $tier = 0;
+      foreach my $lvl (sort { $a <=> $b } keys %level_cost) {
+         $mult *= $level_cost{$lvl};
+         $tier++;
+         printf $OUT "|-\n| %d || %d || %.4g\n", $lvl+1, $tier, $mult;
+      }
    }
    print $OUT qq[|}\n\n];
 

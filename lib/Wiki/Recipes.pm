@@ -6,8 +6,7 @@ use warnings;
 my @rarity_name = qw( None Common Uncommon Rare Epic Legendary );
 my @rarity_bonus = ( 1, 1, 1.3, 1.75, 2.5, 4 );
 my @currency = qw( Coin Bronze Silver Gold );
-my @stats = qw( PhysDmg MagDmg HP STR INT END WIS SPD CritChance CritDmg
-   CritResist CCResist PhysPen MagPen Block Resist Dodge Shield FirstStrike );
+my @stats = qw( PhysDmg MagDmg HP STR INT END WIS SPD );
 my @enhance = (1.42, 2.37, 4.01, 6.39, 9.77, 15.37);
 my @slots = ( '1H Weapon', 'MR Weapon', 'Body', 'Feet', 'Hands', 'Head' );
 my %slots = (

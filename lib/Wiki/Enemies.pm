@@ -50,10 +50,12 @@ my @stats = qw( HP STR INT END WIS SPD CrCh CrDmg CrRes
    DeRes PPen MPen Block Resist Dodge Shield FirStr CrArm DeAcc );
 my @stat_disp = qw( HP STR INT END WIS SPD CrCh CrDmg CrRes CrArm
    DeAcc DeRes Dodge FirStr );
+my @summ_disp = qw( HP S/I E/W SPD CrCh CrDmg CrRes CrArm DeAcc DeRes FirStr );
 
 sub build {
    my ($ctx) = @_;
    my $enemies = {};
+   my $stats = {};
    $ctx->for_type('AreaData', sub {
       my ($area) = @_;
       my $name = $area->{name};
@@ -64,22 +66,25 @@ sub build {
          world_enemies($enemies, 1, $1, $area);
       }
       elsif ($name =~ /^W(\d+) Dungeon T?(\d+)/) {
-         dungeon_enemies($enemies, 'D', $1, $2, $area);
+         dungeon_enemies($enemies, $stats, 'D', $1, $2, $area);
       }
       elsif ($name =~ /^W(\d+) Raid T?(\d+)/) {
-         dungeon_enemies($enemies, 'R', $1, $2, $area);
+         dungeon_enemies($enemies, $stats, 'R', $1, $2, $area);
       }
    });
    merge_world_enemies($enemies);
    write_enemies($enemies);
+   write_summary($stats);
 }
 
 sub dungeon_enemies {
-   my ($enemies, $loc, $world, $tier, $area) = @_;
+   my ($enemies, $stats, $loc, $world, $tier, $area) = @_;
    return if $world > 7 || $tier > 8;
    $tier = $world if $tier < 1;
    my $area_enemies = $area->{enemies};
    my $levels = $area->{enemy_levels};
+   $stats = $stats->{$tier} ||= {};
+
    for my $i (0 .. $#$area_enemies) {
       my $enemy = $area_enemies->[$i];
       my $lvl = $levels->[$i];
@@ -89,6 +94,17 @@ sub dungeon_enemies {
             lvl_lo=>$lvl, lvl_hi=>$lvl };
       $rec->{lvl_lo} = $lvl if $lvl < $rec->{lvl_lo};
       $rec->{lvl_hi} = $lvl if $lvl > $rec->{lvl_hi};
+
+      my $base = $enemy->{curve}{base};
+      my $gain = $enemy->{curve}{gain};
+      for my $i (0 .. $#$base) {
+         my $val = $base->[$i];
+         $val += $gain->[$i] * $lvl unless $i == 5;
+         my $name = $stats[$i];
+         if    ($name eq 'STR' || $name eq 'INT') { $name = 'S/I' }
+         elsif ($name eq 'END' || $name eq 'WIS') { $name = 'E/W' }
+         push @{$stats->{$name}}, $val;
+      }
    }
 }
 
@@ -212,6 +228,32 @@ sub write_stats {
       print $OUT Grindia::describe_attack($att, 'hero');
    }
    print $OUT "\n";
+}
+
+sub write_summary {
+   my ($stats) = @_;
+   open my $OUT, '>:utf8', 'wiki/Enemies/Enemies' or return;
+   print $OUT "==Typical Stats==\n",
+      "Based on [[Dungeons and Raids]].\n",
+      qq[{| class="wikitable"\n],
+      "|-\n! Tier || ", join(" || ", @summ_disp), "\n";
+   for my $tier (sort { $a <=> $b } keys %$stats) {
+      print $OUT "|-\n| $tier";
+      for my $i (0 .. $#summ_disp) {
+         my $name = $summ_disp[$i];
+         my $vals = $stats->{$tier}{$name} or next;
+         @$vals = sort { $a <=> $b } @$vals;
+         my $val = $#$vals & 1
+            ? ($vals->[($#$vals+1) >> 1] + $vals->[$#$vals >> 1]) / 2
+            : $vals->[$#$vals >> 1];
+         if    ($i < 3) { $val = Grindia::numfmt($val) }
+         elsif ($i > 4) { $val .= '%' }
+         print $OUT " || $val";
+      }
+      print $OUT "\n";
+   }
+   print $OUT qq[|}\n];
+   close $OUT;
 }
 
 1 # end Enemies.pm

@@ -46,9 +46,11 @@ sub write_types {
    foreach my $type (@{$meta->{typedefs}}) {
       print $OUT "name: $type->{name}\n";
       print $OUT "parent: $type->{parent_type}\n" if $type->{parent_type};
-      if (my $interfaces = $type->{interfaces}) {
+      if (my $interfaces = $type->{interface_offsets}) {
          print $OUT "interfaces:\n";
-         print $OUT "  $_\n" foreach @$interfaces;
+         foreach my $int (@$interfaces) {
+            printf $OUT "  %-16s  %d\n", $int->{type}, $int->{offset};
+         }
       }
       if (my $nested = $type->{nested_types}) {
          print $OUT "nested types:\n";
@@ -544,7 +546,7 @@ my %typechars = (
 sub read_params {
    my ($meta) = @_;
    my $strings = $meta->{strings} or die;
-   my $typenames = $meta->{typenames} or die;
+   my $typeinfo = $meta->{typeinfo} or die;
 
    $meta->{params} = my $params = read_records($meta, 'params', [
       ['name_off', 'l'],
@@ -553,12 +555,16 @@ sub read_params {
 
    foreach my $param (@$params) {
       $param->{name} = $strings->{$param->{name_off}};
-      $param->{type} = $typenames->[$param->{type_idx}];
+      my $info = $typeinfo->[$param->{type_idx}];
+      $param->{type} = $info->{name};
+      $param->{type_attrs} = $info->{attrs};
    }
 
    $meta->{invokers} = my $invokers = {};
    foreach my $meth (@{$meta->{methods}}) {
-      $meth->{return_type} = $typenames->[$meth->{return_type_idx}];
+      my $info = $typeinfo->[$meth->{return_type_idx}];
+      $meth->{return_type} = $info->{name};
+      $meth->{return_type_attrs} = $info->{attrs};
       my $sig = $typechars{$meth->{return_type}} || 'i';
       $sig .= 'i' unless $meth->{static};
       $meth->{params} = my $args = get_slice($params,

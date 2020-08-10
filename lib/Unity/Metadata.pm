@@ -558,13 +558,14 @@ sub read_params {
       my $info = $typeinfo->[$param->{type_idx}];
       $param->{type} = $info->{name};
       $param->{type_attrs} = $info->{attrs};
+      # 2: by ref, 3: array, 0x1010: optional
    }
 
    $meta->{invokers} = my $invokers = {};
    foreach my $meth (@{$meta->{methods}}) {
       my $info = $typeinfo->[$meth->{return_type_idx}];
       $meth->{return_type} = $info->{name};
-      $meth->{return_type_attrs} = $info->{attrs};
+      $meth->{return_type_attrs} = $info->{attrs}; # always 0
       my $sig = $typechars{$meth->{return_type}} || 'i';
       $sig .= 'i' unless $meth->{static};
       $meth->{params} = my $args = get_slice($params,

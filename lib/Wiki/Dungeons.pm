@@ -8,6 +8,13 @@ my @pet_order = ( 'Fox', 'Hare', 'Owl', 'Unicorn', 'Rat', 'Dog', 'Turtle',
 my @artifacts = qw( Bull Meteor Tree Blessing Rat City Lifeguard Bubble
    Desert Scarab Undead Holy );
 
+my @resources = qw( Coin Bronze Silver Gold );
+for my $i (1 .. 8) {
+   for my $j (1 .. 3) {
+      push @resources, "Jewel|$i|$j";
+   }
+}
+
 sub build {
    my ($ctx) = @_;
    my %dungeons;
@@ -73,7 +80,34 @@ sub show_dungeon {
          print $OUT "| $enemy->{title}<br>Level $level<br>HP $hp\n";
       }
    }
-   print $OUT qq[|}\n];
+   print $OUT qq[|}\n\n];
+
+   print $OUT "==Resources==\n",
+      qq[{| class="wikitable"\n];
+   foreach my $tier (@tiers) {
+      my $dung = $tiers->{$tier};
+      print $OUT "|-\n| Tier $tier\n";
+      my @out;
+      for my $i (1 .. 3) {
+         my $range = $dung->{"crafting_reward$i"};
+         my $lo = Grindia::numfmt($range->[0]);
+         my $hi = Grindia::numfmt($range->[1]);
+         $lo .= '–' . $hi if $hi ne $lo;
+         push @out, "{{$resources[$i]|$lo}}";
+      }
+      print $OUT "| ", join("<br>", @out), "\n";
+      my $rewards = $dung->{resource_rewards};
+      @out = ();
+      for my $i (0 .. $#$rewards) {
+         my $val = $rewards->[$i] or next;
+         my $lo = Grindia::numfmt($val * 0.9);
+         my $hi = Grindia::numfmt($val * 1.1);
+         $lo .= '–' . $hi if $hi ne $lo;
+         push @out, "{{$resources[$i]|$lo}}";
+      }
+      print $OUT "| ", join("<br>", @out), "\n";
+   }
+   print $OUT qq[|}\n\n];
 
    print $OUT "==Pet Shards==\n",
       qq[{| class="wikitable"\n];
@@ -88,7 +122,7 @@ sub show_dungeon {
       }
       print $OUT "|-\n| Tier $tier\n| ", join(", ", @out), "\n";
    }
-   print $OUT qq[|}\n];
+   print $OUT qq[|}\n\n];
 
    my @rows;
    foreach my $tier (@tiers) {
@@ -105,9 +139,9 @@ sub show_dungeon {
    print $OUT "==Artifacts==\n",
       qq[{| class="wikitable"\n],
       @rows,
-      qq[|}\n] if @rows;
+      qq[|}\n\n] if @rows;
 
-   print $OUT "\n[[Category:Dungeons and Raids]]\n";
+   print $OUT "[[Category:Dungeons and Raids]]\n";
    close $OUT;
 }
 

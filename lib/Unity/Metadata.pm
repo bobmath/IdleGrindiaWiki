@@ -517,8 +517,12 @@ sub read_methods {
       # iflags:
       # 0x0003: type (0=cil, 1=native, 3=runtime)
       # 0x0004: unmanaged
+      # 0x0008: no inlining
       # 0x0010: forward ref
       # 0x0020: synchronized
+      # 0x0040: no optimization
+      # 0x0080: preserve signature
+      # 0x1000: internal call
    }
 
    foreach my $type (@{$meta->{typedefs}}) {
@@ -558,7 +562,11 @@ sub read_params {
       my $info = $typeinfo->[$param->{type_idx}];
       $param->{type} = $info->{name};
       $param->{type_attrs} = $info->{attrs};
-      # 2: by ref, 3: array, 0x1010: optional
+      # 0x0001: in
+      # 0x0002: out
+      # 0x0010: optional
+      # 0x1000: has default
+      # 0x2000: has field marshal
    }
 
    $meta->{invokers} = my $invokers = {};
@@ -933,6 +941,23 @@ sub read_typedefs {
       $type->{name} .= '.' if length($type->{name});
       $type->{name} .= $strings->{$type->{name_off}};
       $type->{basename} = $type->{name};
+      # flags:
+      # 0x000007: visibility
+      # 0=notpublic, 1:public, 2:nestedpublic, 3:nestedprivate, 4:nestedfamily
+      # 5=nestedassembly, 6=nested family&assembly, 7:nested fam|asm
+      # 0x000008: sequential layout
+      # 0x000010: explicit layout
+      # 0x000020: interface
+      # 0x000080: abstract
+      # 0x000100: sealed
+      # 0x000400: special name
+      # 0x000800: runtime special name
+      # 0x001000: import
+      # 0x002000: serializable
+      # 0x030000: string format: 0=ansi, 1=unicode, 2=auto, 3=custom
+      # 0x040000: has security
+      # 0x100000: class init before field init
+      # 0xC00000: custom string format
    }
 }
 

@@ -19,13 +19,12 @@ sub extract {
    read_generics($meta);
    read_nested_types($meta);
    read_interfaces($meta);
-   read_fields($meta);
-   read_events($meta);
-   read_params($meta);
    read_properties($meta);
+   get_type_names($meta);
    get_gen_methods($meta);
    get_type_layouts($meta);
    get_interop($meta);
+   read_events($meta);
    read_defaults($meta);
    read_usage($meta);
    read_rgctx($meta);
@@ -362,7 +361,6 @@ sub read_vtables {
 sub read_interfaces {
    my ($meta) = @_;
    my $typenames = $meta->{typenames} or die;
-   my $interfaces = read_types($meta, 'interfaces');
    my $interface_offsets = read_records($meta, 'interface_offsets', [
       ['type_idx', 'l'],
       ['offset', 'l'] ]);
@@ -370,8 +368,6 @@ sub read_interfaces {
       $off->{type} = $typenames->[$off->{type_idx}];
    }
    foreach my $type (@{$meta->{typedefs}}) {
-      $type->{interfaces} = get_slice($interfaces,
-         $type->{interface_start}, $type->{interface_count});
       $type->{interface_offsets} = get_slice($interface_offsets,
          $type->{interface_offset_start}, $type->{interface_offset_count});
    }
@@ -476,7 +472,8 @@ sub read_defaults {
 
 sub read_methods {
    my ($meta) = @_;
-   my $strings = $meta->{strings};
+   my $strings = $meta->{strings} or die;
+
    $meta->{methods} = my $methods = read_records($meta, 'methods', [
       ['name_off', 'l'],
       ['declaring_type_idx', 'l'],
@@ -494,10 +491,18 @@ sub read_methods {
       ['slot', 's'],
       ['param_count', 'S'] ]);
 
+   $meta->{params} = my $params = read_records($meta, 'params', [
+      ['name_off', 'l'],
+      ['token', 'L'],
+      ['type_idx', 'l'] ]);
+   foreach my $param (@$params) {
+      $param->{name} = $strings->{$param->{name_off}};
+   }
+
    foreach my $meth (@$methods) {
       $meth->{basename} = $meth->{name} = $strings->{$meth->{name_off}};
-      $meth->{declaring_type} =
-         $meta->{typedefs}[$meth->{declaring_type_idx}]{name};
+      $meth->{params} = my $args = get_slice($params,
+         $meth->{param_start}, $meth->{param_count});
       $meth->{static} = 1 if $meth->{flags} & 0x10;
       $meth->{virtual} = 1 if $meth->{flags} & 0x40;
       # 0x0007: access
@@ -523,70 +528,6 @@ sub read_methods {
       # 0x0040: no optimization
       # 0x0080: preserve signature
       # 0x1000: internal call
-   }
-
-   foreach my $type (@{$meta->{typedefs}}) {
-      my $count = $type->{method_count} or next;
-      my $start = $type->{method_start};
-      my $type_idx = $type->{_num};
-      my $type_name = $type->{name};
-      for my $idx ($start .. $start+$count-1) {
-         my $meth = $methods->[$idx] or die;
-         $meth->{_owner_idx} = $type_idx;
-         $meth->{_owner} = $type_name;
-         $meth->{fullname} = $type_name . '.' . $meth->{name};
-      }
-   }
-}
-
-my %typechars = (
-   'System.Int64'  => 'j',
-   'System.UInt64' => 'j',
-   'System.Single' => 'f',
-   'System.Double' => 'd',
-   'System.Void'   => 'v',
-);
-
-sub read_params {
-   my ($meta) = @_;
-   my $strings = $meta->{strings} or die;
-   my $typeinfo = $meta->{typeinfo} or die;
-
-   $meta->{params} = my $params = read_records($meta, 'params', [
-      ['name_off', 'l'],
-      ['token', 'L'],
-      ['type_idx', 'l'] ]);
-
-   foreach my $param (@$params) {
-      $param->{name} = $strings->{$param->{name_off}};
-      my $info = $typeinfo->[$param->{type_idx}];
-      $param->{type} = $info->{name};
-      $param->{type_attrs} = $info->{attrs};
-      # 0x0001: in
-      # 0x0002: out
-      # 0x0010: optional
-      # 0x1000: has default
-      # 0x2000: has field marshal
-   }
-
-   $meta->{invokers} = my $invokers = {};
-   foreach my $meth (@{$meta->{methods}}) {
-      my $info = $typeinfo->[$meth->{return_type_idx}];
-      $meth->{return_type} = $info->{name};
-      $meth->{return_type_attrs} = $info->{attrs}; # always 0
-      my $sig = $typechars{$meth->{return_type}} || 'i';
-      $sig .= 'i' unless $meth->{static};
-      $meth->{params} = my $args = get_slice($params,
-         $meth->{param_start}, $meth->{param_count});
-      if ($args) {
-         foreach my $arg (@$args) {
-            $sig .= $typechars{$arg->{type}} || 'i';
-         }
-      }
-      $sig .= 'i';
-      $meth->{shortsig} = $sig;
-      my $inv = $meth->{invoker_idx};
-      $invokers->{$inv} = $sig if $inv >= 0;
    }
 }
 
@@ -667,6 +608,74 @@ sub get_interop {
       my $addr = pop @data;
       my $type = $typelookup->{$addr} or next;
       $type->{interop} = \@data;
+   }
+}
+
+sub get_type_names {
+   my ($meta) = @_;
+   my $typeinfo = $meta->{typeinfo} or die;
+   my $typedefs = $meta->{typedefs} or die;
+   my $methods = $meta->{methods} or die;
+
+   foreach my $type (@$typedefs) {
+      if ((my $idx = $type->{parent_type_idx}) >= 0) {
+         $type->{parent_type} = $typeinfo->[$idx]{name};
+      }
+      my $count = $type->{method_count} or next;
+      my $start = $type->{method_start};
+      my $type_idx = $type->{_num};
+      my $type_name = $type->{name};
+      for my $idx ($start .. $start+$count-1) {
+         my $meth = $methods->[$idx] or die;
+         $meth->{_owner_idx} = $type_idx;
+         $meth->{_owner} = $type_name;
+         $meth->{fullname} = $type_name . '.' . $meth->{name};
+      }
+   }
+
+   foreach my $fld (@{$meta->{fields}}) {
+      my $info = $typeinfo->[$fld->{type_idx}] or next;
+      $fld->{type} = $info->{name};
+      $fld->{type_attrs} = my $attrs = $info->{attrs};
+      $fld->{static} = 1 if $attrs & 0x10;
+   }
+
+   foreach my $ref (@{$meta->{field_refs}}) {
+      my $info = $typeinfo->[$ref->{type_idx}] or next;
+      my $type = $typedefs->[$info->{idx}] or next;
+      my $field = $type->{fields}[$ref->{field_idx}] or next;
+      $ref->{name} = $type->{name} . '.' . $field->{name};
+   }
+
+   foreach my $param (@{$meta->{params}}) {
+      my $info = $typeinfo->[$param->{type_idx}];
+      $param->{type} = $info->{name};
+      $param->{type_attrs} = $info->{attrs};
+      # 0x0001: in
+      # 0x0002: out
+      # 0x0010: optional
+      # 0x1000: has default
+      # 0x2000: has field marshal
+   }
+
+   $meta->{invokers} = my $invokers = {};
+   foreach my $meth (@$methods) {
+      $meth->{declaring_type} = $typedefs->[$meth->{declaring_type_idx}]{name};
+      my $info = $typeinfo->[$meth->{return_type_idx}];
+      $meth->{return_type} = $info->{name};
+      $meth->{return_type_attrs} = $info->{attrs}; # always 0
+      my $sig = $info->{retchar} || '?';
+      $sig .= 'i' unless $meth->{static};
+      if (my $args = $meth->{params}) {
+         foreach my $arg (@$args) {
+            $info = $typeinfo->[$arg->{type_idx}];
+            $sig .= $info->{char} || '?';
+         }
+      }
+      $sig .= 'i';
+      $meth->{shortsig} = $sig;
+      my $inv = $meth->{invoker_idx};
+      $invokers->{$inv} = $sig if $inv >= 0;
    }
 }
 
@@ -758,7 +767,8 @@ sub find_typeinfo {
    $meta->{typelookup} = my $typelookup = {};
    foreach my $ptr (@ptrs) {
       my ($idx, $flags) = unpack 'V*', substr($meta->{mem}, $ptr, 8);
-      push @$typeinfo, $typelookup->{$ptr} = { idx=>$idx, flags=>$flags };
+      push @$typeinfo, $typelookup->{$ptr} =
+         { idx=>$idx, flags=>$flags, ptr=>$ptr };
    }
    $meta->{geninsts} = my $geninsts = [];
    foreach my $ptr (@insts) {
@@ -844,22 +854,77 @@ sub type_name {
    $info->{type} = $iltypes{$type} || $type;
    $info->{attrs} = $info->{flags} & 0xffff;
    $info->{mods} = ($info->{flags} >> 24) & 0x3f;
-   if ($type == 0xf) {
+
+   if ($type == 0x01) { # void
+      $info->{char} = 'v';
+   }
+   elsif ($type >= 0x02 && $type <= 0x09) { # various ints
+      $info->{char} = 'i';
+      $info->{primitive} = 1;
+   }
+   elsif ($type == 0x0a || $type == 0x0b) { # i8, u8
+      $info->{char} = 'j';
+      $info->{primitive} = 1;
+   }
+   elsif ($type == 0x0c) { # r4
+      $info->{char} = 'f';
+      $info->{primitive} = 1;
+   }
+   elsif ($type == 0x0d) { # r8
+      $info->{char} = 'd';
+      $info->{primitive} = 1;
+   }
+   elsif ($type == 0x0f) { # ptr
       $name = '*' . type_name($meta, $idx);
    }
-   elsif ($type == 0x14) {
+   elsif ($type == 0x11) { # valuetype
+      if ($info->{char} = val_type($meta, $info->{idx})) {
+         $info->{primitive} = 1;
+      }
+      else {
+         $info->{char} = 'i';
+         $info->{retchar} = 'vi';
+         $info->{offset} = 8;
+      }
+   }
+   elsif ($type == 0x14) { # array
       $name = array_name($meta, $idx);
    }
-   elsif ($type == 0x15) {
+   elsif ($type == 0x15) { # genericinst
       $name = gen_name($meta, $idx);
    }
-   elsif ($type == 0x1d) {
+   elsif ($type == 0x1d) { # szarray
       $name = type_name($meta, $idx) . '[]';
    }
+
    $name ||= "?$idx";
-   $name = '&' . $name if $info->{flags} & 0x40000000;
+   if ($info->{flags} & 0x40000000) {
+      $name = '&' . $name;
+      $info->{char} = 'i';
+      delete $info->{primitive};
+   }
    $name = '!' . $name if $info->{flags} & 0x80000000;
+   $info->{char} ||= 'i';
+   $info->{retchar} ||= $info->{char};
    return $info->{name} = $name;
+}
+
+sub val_type {
+   my ($meta, $idx) = @_;
+   my $type = $meta->{typedefs}[$idx] or return;
+   my $fields = $type->{fields} or return;
+   my $fld_idx;
+   foreach my $field (@$fields) {
+      my $info = $meta->{typeinfo}[$field->{type_idx}] or next;
+      next if $info->{flags} & 0x10; # static
+      return if defined $fld_idx;
+      $fld_idx = $field->{type_idx};
+   }
+   return unless defined $fld_idx;
+   my $info = $meta->{typeinfo}[$fld_idx] or return;
+   type_name($meta, $info->{ptr}) unless $info->{char};
+   return unless $info->{primitive};
+   return $info->{char};
 }
 
 sub read_generics {
@@ -906,6 +971,7 @@ sub read_generics {
 sub read_typedefs {
    my ($meta) = @_;
    my $strings = $meta->{strings} or die;
+
    $meta->{typedefs} = my $typedefs = read_records($meta, 'typedefs', [
       ['name_off', 'l'],
       ['namespace_off', 'l'],
@@ -936,6 +1002,7 @@ sub read_typedefs {
       ['interface_offset_count', 'S'],
       ['bitfield', 'L'],
       ['token', 'L'] ]);
+
    foreach my $type (@$typedefs) {
       $type->{name} = $strings->{$type->{namespace_off}};
       $type->{name} .= '.' if length($type->{name});
@@ -959,12 +1026,6 @@ sub read_typedefs {
       # 0x100000: class init before field init
       # 0xC00000: custom string format
    }
-}
-
-sub read_fields {
-   my ($meta) = @_;
-   my $strings = $meta->{strings} or die;
-   my $typeinfo = $meta->{typeinfo} or die;
 
    $meta->{fields} = my $fields = read_records($meta, 'fields', [
       ['name_off', 'l'],
@@ -972,22 +1033,11 @@ sub read_fields {
       ['token', 'L'] ]);
    foreach my $fld (@$fields) {
       $fld->{name} = $strings->{$fld->{name_off}};
-      my $type = $typeinfo->[$fld->{type_idx}] or next;
-      $fld->{type} = $type->{name};
-      $fld->{type_attrs} = my $attrs = $type->{attrs};
-      $fld->{static} = 1 if $attrs & 0x10;
-      # 0x0007: access
-      # (1=private, 2=fam&asm, 3=assembly, 4=family, 5=fam|asm, 6=public)
-      # 0x0010: static
-      # 0x0020: init only
-      # 0x0040: literal
-      # 0x0080: no serialize
-      # 0x0100: has rva
-      # 0x0200: special name
-      # 0x0400: special name
-      # 0x1000: has marshalling info
-      # 0x2000: pinvoke
-      # 0x8000: has default
+   }
+
+   foreach my $type (@{$meta->{typedefs}}) {
+      $type->{fields} = get_slice($fields,
+         $type->{field_start}, $type->{field_count});
    }
 
    my $field_sizes = read_records($meta, 'field_sizes', [
@@ -999,23 +1049,9 @@ sub read_fields {
       $fld->{size} = $size->{size};
    }
 
-   foreach my $type (@{$meta->{typedefs}}) {
-      if ((my $idx = $type->{parent_type_idx}) >= 0) {
-         $type->{parent_type} = $typeinfo->[$idx]{name};
-      }
-      $type->{fields} = get_slice($fields,
-         $type->{field_start}, $type->{field_count});
-   }
-
    $meta->{field_refs} = my $field_refs = read_records($meta, 'field_refs', [
       ['type_idx', 'l'],
       ['field_idx', 'l'] ]);
-   foreach my $ref (@$field_refs) {
-      my $info = $meta->{typeinfo}[$ref->{type_idx}] or next;
-      my $type = $meta->{typedefs}[$info->{idx}] or next;
-      my $field = $type->{fields}[$ref->{field_idx}] or next;
-      $ref->{name} = $type->{name} . '.' . $field->{name};
-   }
 }
 
 sub read_events {

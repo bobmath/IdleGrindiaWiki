@@ -246,8 +246,8 @@ sub write_summary {
          my $val = $#$vals & 1
             ? ($vals->[($#$vals+1) >> 1] + $vals->[$#$vals >> 1]) / 2
             : $vals->[$#$vals >> 1];
-         if    ($i < 3) { $val = Grindia::numfmt($val) }
-         elsif ($i > 4) { $val .= '%' }
+         if    ($i < 4) { $val = Grindia::numfmt($val) }
+         else { $val .= '%' }
          print $OUT " || $val";
       }
       print $OUT "\n";

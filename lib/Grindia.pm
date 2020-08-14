@@ -405,11 +405,11 @@ sub describe_effect {
    elsif ($type =~ /^Deal(Phys|Magic)Damage/) {
       my $dmgtype = $1 eq 'Phys' ? 'Physical' : 'Magic';
       $what = "Deal ";
-      my $dmg = $eff->{damage};
-      $what .= Grindia::numfmt($dmg) if $dmg;
       if (my $mul = $eff->{eqFactor}) {
-         $what .= ' + ' if $dmg;
          $what .= sprintf '%g%%', $mul*100;
+      }
+      else {
+         $what .= Grindia::numfmt($eff->{damage});
       }
       $what .= " $dmgtype Damage";
    }

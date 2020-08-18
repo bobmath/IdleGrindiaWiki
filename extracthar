@@ -1,0 +1,88 @@
+#!/usr/bin/env perl
+# Extract game files from a .har file, then delete the .har
+use strict;
+use warnings;
+use IO::Uncompress::Gunzip qw( gunzip $GunzipError );
+use IO::Uncompress::RawInflate qw( rawinflate $RawInflateError );
+use JSON ();
+use MIME::Base64 qw( decode_base64 );
+
+die "usage: $0 harfile\n" unless @ARGV == 1;
+my $json = JSON->new();
+$json->canonical(1);
+$json->indent(1);
+my $file = $ARGV[0];
+open my $IN, '<:raw', $file or die "Can't read $file: $!";
+local $/ = undef;
+my $data = <$IN>;
+close $IN;
+$data = $json->decode($data);
+my $files = {};
+foreach my $ent (@{$data->{log}{entries}}) {
+   my $url = $ent->{request}{url} or next;
+   if ($url =~ /\.unityweb$/ && $url !~ /framework/) {
+      write_file($ent, $url);
+   }
+   elsif ($url =~ /GetUserData/) {
+      write_user($ent, 'savefile.json');
+   }
+   elsif ($url =~ /UpdateUserData/) {
+      write_post($ent, 'savefile.json');
+   }
+}
+unlink $file;
+
+sub write_file {
+   my ($ent, $file) = @_;
+   $file =~ s{^.*/}{};
+   $file =~ s/[^-.\w]+/_/g;
+   $file =~ s/^\./,/;
+   my $cont = $ent->{response}{content} or next;
+   my $text = $cont->{text};
+   my $enc = $cont->{encoding} || '';
+   my $size = $cont->{size} || 0;
+   $text = decode_base64($text) if $enc eq 'base64';
+   die "wrong size for $file" unless $size == length($text);
+   print $file, "\n";
+   open my $OUT, '>:raw', $file or die "Can't write $file: $!";
+   if ($text =~ /^\x1f\x8b/) {
+      gunzip(\$text, $OUT) or die "gunzip error: $GunzipError";
+   }
+   else {
+      print $OUT $text or die "write error: $!";
+   }
+   close $OUT;
+}
+
+sub write_user {
+   my ($ent, $file) = @_;
+   my $data = $ent->{response}{content} or return;
+   return unless $data->{mimeType} =~ m{^application/json\b};
+   return unless length($data->{text}) eq $data->{size};
+   return unless $data->{text} =~ /SaveFile/;
+   $data = eval { $json->decode($data->{text}) } or return;
+   write_savefile($data->{data}{Data}{SaveFile}{Value}, $file);
+}
+
+sub write_post {
+   my ($ent, $file) = @_;
+   my $data = $ent->{request}{postData} or return;
+   return unless $data->{mimeType} eq 'application/json';
+   return unless $data->{text} =~ /SaveFile/;
+   $data = eval { $json->decode($data->{text}) } or return;
+   write_savefile($data->{Data}{SaveFile}, $file);
+}
+
+sub write_savefile {
+   my ($data, $file) = @_;
+   return unless $data;
+   $data = decode_base64($data);
+   my $text;
+   rawinflate(\$data, \$text) or die "inflate error: $RawInflateError";
+   $data = $json->decode($text);
+   print $file, "\n";
+   open my $OUT, '>:utf8', $file or die "Can't write $file: $!";
+   print $OUT $json->encode($data);
+   close $OUT;
+}
+

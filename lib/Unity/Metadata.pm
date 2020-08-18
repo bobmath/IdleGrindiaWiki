@@ -624,7 +624,7 @@ sub get_type_names {
       my $count = $type->{method_count} or next;
       my $start = $type->{method_start};
       my $type_idx = $type->{_num};
-      my $type_name = $type->{name};
+      my $type_name = $type->{basename};
       for my $idx ($start .. $start+$count-1) {
          my $meth = $methods->[$idx] or die;
          $meth->{_owner_idx} = $type_idx;

@@ -43,7 +43,7 @@ for my $i (1 .. $count) {
    }
    my $bonuses = $factory->{"tier$tier"} or die;
    my $bonus = $bonuses->[get_rand() % @$bonuses];
-   my $out = "$i: $bonus->{title}: $bonus->{desc}";
+   my $out = "$i: T$tier $bonus->{title}: $bonus->{desc}";
    $out =~ s/\s+/ /g;
    print $out, "\n";
 }

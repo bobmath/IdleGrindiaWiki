@@ -79,10 +79,11 @@ sub build {
 
 sub dungeon_enemies {
    my ($enemies, $stats, $loc, $world, $tier, $area) = @_;
-   return if $world > 7 || $tier > 8;
+   return if $world > 7 || $tier > 9;
    $tier = $world if $tier < 1;
    my $area_enemies = $area->{enemies};
    my $levels = $area->{enemy_levels};
+   return if $levels->[0] > 1e5;
    $stats = $stats->{$tier} ||= {};
 
    for my $i (0 .. $#$area_enemies) {

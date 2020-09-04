@@ -421,6 +421,29 @@ sub describe_effect {
    return $what;
 }
 
+# source: BattleDebuffIconDisplay.DebuffIcons
+my %buff_icons = (
+   0  => 'Debuff_Speed.png',
+   1  => 'Debuff_Attack.png',
+   2  => 'Debuff_Defense.png',
+   3  => 'Buff_Speed.png',
+   4  => 'Stun.png',
+   6  => 'Damage_Over_Time.png',
+   7  => 'Damage_Over_Time.png',
+   9  => 'Heal_Over_Time.png',
+   10 => 'Buff_Shield.png',
+   11 => 'Buff_Counter.png',
+   12 => 'Cleanse.png',
+   13 => 'Dispell.png',
+   14 => 'Buff_Attack.png',
+   17 => 'Buff_Attack.png',
+   20 => 'Buff_Attack.png',
+   23 => 'Buff_Attack.png',
+   24 => 'Buff_Attack.png',
+   25 => 'Buff_Attack.png',
+   26 => 'Buff_Attack.png',
+);
+
 sub describe_buff {
    my ($buff, $targ, $opponent) = @_;
    my $type = $buff->{type};
@@ -428,145 +451,149 @@ sub describe_buff {
    my $whose = $targ ? " ${opponent}'s" : "";
    my $whose2 = $whose || ($opponent eq "enemy" ? " hero's" : " own");
    my $time = format_time($buff->{duration});
-   my $desc;
+   my $desc = '';
+   if (my $icon = $buff_icons{$type}) {
+      $desc = "[[File:$icon|24px]] ";
+   }
+
    # source: BattleEffectLogic.calculateFinalStats
    if ($type == 0) {
-      $desc = sprintf "Reduce%s SPD by %g for %s",
+      $desc .= sprintf "Reduce%s SPD by %g for %s",
          $whose2, $buff->{value1}, $time;
    }
    elsif ($type == 1) {
-      $desc = sprintf "Reduce%s STR and INT by %g for %s",
+      $desc .= sprintf "Reduce%s STR and INT by %g for %s",
          $whose2, $buff->{value1}, $time;
    }
    elsif ($type == 2) {
-      $desc = sprintf "Reduce%s END and WIS by %g for %s",
+      $desc .= sprintf "Reduce%s END and WIS by %g for %s",
          $whose2, $buff->{value1}, $time;
    }
    elsif ($type == 3) {
-      $desc = sprintf "Increase%s SPD by %g for %s",
+      $desc .= sprintf "Increase%s SPD by %g for %s",
          $whose, $buff->{value1}, $time;
    }
    elsif ($type == 4) {
-      $desc = sprintf "Stun%s for %s",
+      $desc .= sprintf "Stun%s for %s",
          $targ ? '' : ' self', $time;
    }
    elsif ($type == 5) {
-      $desc = sprintf "Deal %s damage over %s",
+      $desc .= sprintf "Deal %s damage over %s",
          Grindia::numfmt($buff->{value1}), $time;
    }
    elsif ($type == 6) {
-      $desc = sprintf "Deal %s Physical damage over %s",
+      $desc .= sprintf "Deal %s Physical damage over %s",
          Grindia::numfmt($buff->{value1}), $time;
    }
    elsif ($type == 7) {
-      $desc = sprintf "Deal %s Magic damage over %s",
+      $desc .= sprintf "Deal %s Magic damage over %s",
          Grindia::numfmt($buff->{value1}), $time;
    }
    elsif ($type == 8) {
-      $desc = sprintf "Heal %s Health", Grindia::numfmt($buff->{value1});
+      $desc .= sprintf "Heal %s Health", Grindia::numfmt($buff->{value1});
    }
    elsif ($type == 9) {
-      $desc = sprintf "Heal %s Health over %s",
+      $desc .= sprintf "Heal %s Health over %s",
          Grindia::numfmt($buff->{value1}), $time;
    }
    elsif ($type == 10) {
-      $desc = sprintf "Gain %g Shield", Grindia::numfmt($buff->{value1});
+      $desc .= sprintf "Gain %g Shield", Grindia::numfmt($buff->{value1});
    }
    # type 11 PHYS_COUNTER unimplemented
    elsif ($type == 12) {
-      $desc = sprintf "Remove %g debuff%s from %s",
+      $desc .= sprintf "Remove %g debuff%s from %s",
          $buff->{value1}, ($buff->{value1} > 1 && 's'), $who;
       $desc .= " within " . $time if $buff->{duration};
    }
    elsif ($type == 13) {
-      $desc = sprintf "Remove %g buff%s from %s",
+      $desc .= sprintf "Remove %g buff%s from %s",
          $buff->{value1}, ($buff->{value1} > 1 && 's'), $who;
       $desc .= " within " . $time if $buff->{duration};
    }
    elsif ($type == 14) {
-      $desc = sprintf "Increase%s %s for %s",
+      $desc .= sprintf "Increase%s %s for %s",
          $whose, two_vals($buff, 'STR', 'INT'), $time;
    }
    elsif ($type == 15) {
-      $desc = sprintf "Deal %g damage per debuff (max %g)",
+      $desc .= sprintf "Deal %g damage per debuff (max %g)",
          $buff->{value1}, $buff->{value2};
    }
    elsif ($type == 16) {
-      $desc = sprintf "Increase%s %s for %s",
+      $desc .= sprintf "Increase%s %s for %s",
          $whose, two_vals($buff, 'END', 'WIS'), $time;
    }
    elsif ($type == 17) {
-      $desc = sprintf "Increase%s Crit Chance by %g%% for %s",
+      $desc .= sprintf "Increase%s Crit Chance by %g%% for %s",
          $whose, $buff->{value1}, $time;
    }
    elsif ($type == 18) {
-      $desc = sprintf "Increase END and WIS by %g%% for %s, "
+      $desc .= sprintf "Increase END and WIS by %g%% for %s, "
          . "then deal %g%% magic damage",
          $buff->{value1}*100, $time, $buff->{value2}*100;
    }
    elsif ($type == 19) {
-      $desc = sprintf "Deal %g%% Magic damage over %s, then deal %s%%",
+      $desc .= sprintf "Deal %g%% Magic damage over %s, then deal %s%%",
          $buff->{value1}*100, $time, $buff->{value2}*100;
    }
    elsif ($type == 20) {
-      $desc = sprintf "Increase%s Dodge by %g%% for %s",
+      $desc .= sprintf "Increase%s Dodge by %g%% for %s",
          $whose, $buff->{value1}, $time;
    }
    elsif ($type == 21) {
-      $desc = sprintf "Fill %g%% of%s attack bar", $buff->{value1}/10, $whose;
+      $desc .= sprintf "Fill %g%% of%s attack bar", $buff->{value1}/10, $whose;
    }
    elsif ($type == 22) {
-      $desc = sprintf "Gain %g%% Shield over %s",
+      $desc .= sprintf "Gain %g%% Shield over %s",
          $buff->{value1}, $time;
    }
    elsif ($type == 23) {
-      $desc = sprintf "Increase%s %s for %s",
+      $desc .= sprintf "Increase%s %s for %s",
          $whose, two_vals($buff, 'END', 'WIS', '%'), $time;
    }
    elsif ($type == 24) {
-      $desc = sprintf "Increase%s %s for %s",
+      $desc .= sprintf "Increase%s %s for %s",
          $whose, two_vals($buff, 'STR', 'INT', '%'), $time;
    }
    elsif ($type == 25) {
-      $desc = sprintf "Decrease%s %s for %s",
+      $desc .= sprintf "Decrease%s %s for %s",
          $whose2, two_vals($buff, 'END', 'WIS', '%'), $time;
    }
    elsif ($type == 26) {
-      $desc = sprintf "Decrease%s %s for %s",
+      $desc .= sprintf "Decrease%s %s for %s",
          $whose2, two_vals($buff, 'STR', 'INT', '%'), $time;
    }
    # type 27 SHIELD_HEAL_PERCENT unimplemented
    elsif ($type == 28) {
-      $desc = sprintf "Increase%s Crit Damage by %g%% for %s",
+      $desc .= sprintf "Increase%s Crit Damage by %g%% for %s",
          $whose, $buff->{value1}, $time;
    }
    elsif ($type == 29) {
-      $desc = sprintf "Decrease%s Crit Chance by %g%% for %s",
+      $desc .= sprintf "Decrease%s Crit Chance by %g%% for %s",
          $whose2, $buff->{value1}, $time;
    }
    elsif ($type == 30) {
-      $desc = sprintf "Decrease%s Crit Resist by %g%% for %s",
+      $desc .= sprintf "Decrease%s Crit Resist by %g%% for %s",
          $whose2, $buff->{value1}, $time;
    }
    elsif ($type == 31) {
-      $desc = sprintf "Reduce%s Healing by %g%% for %s",
+      $desc .= sprintf "Reduce%s Healing by %g%% for %s",
          $whose2, $buff->{value1}*100, $time;
    }
    elsif ($type == 32) {
-      $desc = "Remove$whose2 Shield";
+      $desc .= "Remove$whose2 Shield";
    }
    elsif ($type == 33) {
-      $desc = sprintf "Can't heal, gain %+g%% STR and INT",
+      $desc .= sprintf "Can't heal, gain %+g%% STR and INT",
          $buff->{value1}*100;
       $desc .= sprintf ", %+g%% Crit Chance", $buff->{value2}
          if $buff->{value2};
    }
    elsif ($type == 34) {
-      $desc = sprintf "Healing increased by %g%%, gain %g%% END and WIS",
+      $desc .= sprintf "Healing increased by %g%%, gain %g%% END and WIS",
          $buff->{value1}*100, $buff->{value2}*100;
    }
    else {
-      $desc = "apply buff $type";
+      $desc .= "apply buff $type";
    }
    return $desc;
 }

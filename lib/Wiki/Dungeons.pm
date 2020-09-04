@@ -4,9 +4,12 @@ use strict;
 use warnings;
 
 my @pet_order = ( 'Fox', 'Hare', 'Owl', 'Unicorn', 'Rat', 'Dog', 'Turtle',
-   'Dolphin', 'Lizard', 'Cactus', 'Cat', 'Ghost', 'Slime²', 'Slime' );
+   'Dolphin', 'Lizard', 'Cactus', 'Cat', 'Ghost', 'Slime Squared', 'Slime' );
 my @artifacts = qw( Bull Meteor Tree Blessing Rat City Lifeguard Bubble
    Desert Scarab Undead Holy );
+my %short = (
+   'Slime Squared' => 'Slime²',
+);
 
 my @resources = qw( Coin Bronze Silver Gold );
 for my $i (1 .. 8) {
@@ -20,9 +23,14 @@ sub build {
    my %dungeons;
    $ctx->for_type('DungeonMetaData', sub {
       my ($obj) = @_;
-      if ($obj->{name} =~ /(Dungeon|Raid) (\d+) .*?(\d+)/) {
-         $dungeons{$2+0}{$1}{$3+0} = $obj if $2 <= 7 && $3 <= 8;
-      }
+      my ($type, $world, $tier) =
+         $obj->{name} =~ /(Dungeon|Raid) (\d+) .*?(\d+)/ or return;
+      $world += 0;
+      $tier = ($tier + 0) || $world;
+      return if $world > 7 || $tier > 9;
+      my $levels = $obj->{area}{enemy_levels} or return;
+      return if $levels->[0] > 1e5;
+      $dungeons{$world}{$type}{$tier} = $obj;
    });
 
    mkdir 'wiki/Dungeons';
@@ -50,11 +58,6 @@ sub show_dungeon {
    open my $OUT, '>:utf8', "wiki/Dungeons/$name" or die;
 
    my @tiers = sort { $a <=> $b } keys %$tiers;
-   if (@tiers > 1 && $tiers[0] == 0) {
-      my $first = $tiers[0] = $tiers[1] - 1;
-      $tiers->{$first} = delete $tiers->{0};
-   }
-
    my %titles;
    foreach my $tier (@tiers) {
       my $info = $tiers->{$tier};
@@ -67,13 +70,14 @@ sub show_dungeon {
    print $OUT "==Enemies==\n",
       qq[{| class="wikitable"\n];
    foreach my $tier (@tiers) {
-      print $OUT "|-\n| Tier $tier\n";
       my $dung = $tiers->{$tier};
       my $area = $dung->{area};
       my $enemies = $area->{enemies};
+      my $levels = $area->{enemy_levels};
+      print $OUT "|-\n| Tier $tier\n";
       foreach my $i (0 .. $#$enemies) {
          my $enemy = $enemies->[$i] or next;
-         my $level = $area->{enemy_levels}[$i] || 0;
+         my $level = $levels->[$i] || 0;
          my $curve = $enemy->{curve} or next;
          my $hp = Grindia::numfmt(
             $curve->{base}[0] + $level * $curve->{gain}[0]);
@@ -118,7 +122,8 @@ sub show_dungeon {
          my $num = $pets->[$i] or next;
          $shards->{$i}{$tier} = $num;
          my $name = $pet_order[$i] || "pet$i";
-         push @out, "{{PetShard|$name|$name ×$num}}";
+         my $short = $short{$name} || $name;
+         push @out, "{{PetShard|$name|$short ×$num}}";
       }
       print $OUT "|-\n| Tier $tier\n| ", join(", ", @out), "\n";
    }
@@ -181,7 +186,7 @@ sub show_timers {
    open my $OUT, '>', 'wiki/Dungeons/Timers' or return;
    print $OUT qq[{| class="wikitable"\n|-\n],
       "! Tier || [[File:Clock.png]] Dungeon || [[File:Clock.png]] Raid \n";
-   foreach my $tier (1 .. 8) {
+   foreach my $tier (1 .. 9) {
       print $OUT "|-\n| $tier";
       foreach my $type (qw[ Dungeon Raid ]) {
          my $time = $dungeons->{1}{$type}{$tier}{max_time} or die;

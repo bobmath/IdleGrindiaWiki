@@ -5,7 +5,6 @@ use warnings;
 
 sub build {
    my ($ctx) = @_;
-   my ($pet_disp);
    open my $OUT, '>:utf8', 'wiki/Pets' or die;
    $ctx->for_type('PetsPanelDisplay', sub {
       my ($disp) = @_;

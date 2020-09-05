@@ -53,6 +53,14 @@ sub read_int {
    return $val;
 }
 
+sub read_byte_array {
+   my ($self, $count) = @_;
+   $count //= $self->read_int();
+   my @ary;
+   push @ary, $self->read_byte() for 1 .. $count;
+   return \@ary;
+}
+
 sub read_int_array {
    my ($self, $count) = @_;
    $count //= $self->read_int();

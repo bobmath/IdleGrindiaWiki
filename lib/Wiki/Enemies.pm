@@ -178,8 +178,8 @@ sub write_enemies {
 
 sub write_stats {
    my ($OUT, $rec) = @_;
-   print $OUT qq[{| class="wikitable" width="100%"\n],
-      qq[|-\n| colspan=3 | '''$rec->{enemy}{title}'''\n];
+   print $OUT "{{EnemyStats\n",
+      "|Name=$rec->{enemy}{title}\n";
 
    my $where;
    if ($rec->{loc} eq 'W') {
@@ -195,11 +195,11 @@ sub write_stats {
       $where = "[[$where]]";
       $where .= " Tier " . $rec->{tier} if $rec->{tier} > $rec->{world};
    }
-   print $OUT "| colspan=2 | $where\n";
+   print $OUT "|Loc=$where\n";
 
    my $lvl = $rec->{lvl_lo};
    $lvl .= '–' . $rec->{lvl_hi} if $rec->{lvl_hi} > $rec->{lvl_lo};
-   print $OUT "| colspan=2 | Lvl $lvl\n";
+   print $OUT "|Lvl=$lvl\n";
 
    my %stats;
    my $curve = $rec->{enemy}{curve};
@@ -212,18 +212,13 @@ sub write_stats {
             : sprintf("%g", $val);
       }
       $stats{$stats[$i]} = $vals[0] eq $vals[1] ? $vals[0]
-         : "$vals[0]-$vals[1]";
+         : "$vals[0]–$vals[1]";
    }
-
-   foreach my $row (0 .. 1) {
-      my @row;
-      for (my $i = $row; $i < @stat_disp; $i += 2) {
-         my $stat = $stat_disp[$i];
-         push @row, "$stat $stats{$stat}";
-      }
-      print $OUT "|-\n| ", join(" || ", @row), "\n";
+   for my $stat (@stat_disp) {
+      print $OUT "|$stat=$stats{$stat}";
+      print $OUT "\n" if $stat eq 'SPD';
    }
-   print $OUT qq[|}\n];
+   print $OUT "\n}}\n";
 
    foreach my $att (@{$rec->{enemy}{attacks}}) {
       print $OUT Grindia::describe_attack($att, 'hero');

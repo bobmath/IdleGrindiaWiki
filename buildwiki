@@ -18,7 +18,7 @@ my $ctx = Grindia::get_context($dir);
 mkdir 'wiki';
 
 for my $pkg (qw[ Artifacts Dungeons Enemies Heroes ItemBonuses Pets Prestige
-   Quests Recipes Skills Trials Worlds ])
+   Quests Recipes Skills Stamps Trials Worlds ])
 {
    print "Writing $pkg\n";
    require "Wiki/$pkg.pm";

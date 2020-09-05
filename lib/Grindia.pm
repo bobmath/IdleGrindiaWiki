@@ -137,6 +137,19 @@ $loaders{CraftCostComponent} = sub {
    push @{$obj->{costs}}, $bytes->read_double_array(28) for 1 .. 4;
 };
 
+$loaders{DailyRewardData} = sub {
+   my ($obj, $bytes, $bun, $ctx) = @_;
+   $bytes->skip(28);
+   $obj->{name} = $bytes->read_str();
+   $obj->{unlocked} = $bytes->read_byte_array();
+   $obj->{value} = $bytes->read_double_array();
+   $obj->{title} = $bytes->read_str_array();
+   $obj->{text} = $bytes->read_str_array();
+   $obj->{hunter} = $bytes->read_double_array();
+   $obj->{explorer} = $bytes->read_double_array();
+   $obj->{required} = $bytes->read_int_array();
+};
+
 $loaders{DungeonMetaData} = sub {
    my ($obj, $bytes, $bun, $ctx) = @_;
    $bytes->skip(28);
@@ -628,6 +641,14 @@ sub format_time {
    return sprintf '%g sec', $t if $t <= 120;
    return sprintf '%.0f min', $t/60 if $t <= 120*60;
    return sprintf '%.0f hr', $t/(60*60);
+}
+
+sub trim {
+   my ($str) = @_;
+   $str =~ s/\s+/ /g;
+   $str =~ s/^ //;
+   $str =~ s/ $//;
+   return $str;
 }
 
 my %dungeons = (

@@ -438,6 +438,7 @@ my %buff_icons = (
    14 => 'Buff_Attack.png',
    17 => 'Buff_Attack.png',
    20 => 'Buff_Attack.png',
+   22 => 'Buff_Shield.png',
    23 => 'Buff_Attack.png',
    24 => 'Buff_Attack.png',
    25 => 'Buff_Attack.png',
@@ -543,8 +544,8 @@ sub describe_buff {
       $desc .= sprintf "Fill %g%% of%s attack bar", $buff->{value1}/10, $whose;
    }
    elsif ($type == 22) {
-      $desc .= sprintf "Gain %g%% Shield over %s",
-         $buff->{value1}, $time;
+      $desc .= sprintf "Gain %g%% Shield", $buff->{value1};
+      $desc .= ' over ' . $time if $buff->{duration};
    }
    elsif ($type == 23) {
       $desc .= sprintf "Increase%s %s for %s",

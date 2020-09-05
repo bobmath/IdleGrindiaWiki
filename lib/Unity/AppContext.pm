@@ -71,6 +71,13 @@ sub for_type {
    }
 }
 
+sub get_objects {
+   my ($self, $type) = @_;
+   my @found;
+   $self->for_type($type, sub { push @found, @_ });
+   return wantarray ? @found : $found[0];
+}
+
 sub load_later {
    my ($self, $obj) = @_;
    # defer the load to prevent deep recursion

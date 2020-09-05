@@ -11,6 +11,14 @@ sub build {
    my $data = $ctx->get_objects('DailyRewardData');
 
    for my $i (0 .. $#{$data->{title}}) {
+      if ($i % 5 == 0) {
+         my $tier = $i / 5;
+         my $txt = "Tier " . ($tier + 1);
+         if (my $req = $data->{required}[$tier]) {
+            $txt .= " (requires $req stamps)";
+         }
+         print $OUT "|-\n| colspan=3 | $txt\n";
+      }
       my @cost;
       if (my $hunt = $data->{hunter}[$i]) {
          push @cost, "{{Hunter|$hunt}}";

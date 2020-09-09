@@ -1,27 +1,45 @@
 #!/usr/bin/env perl
 # Predict item reforge results using the random seed in savefile.json
+# First column is the sequence number. Second column is the maximum upgrade
+# tier; for example, a 3 will upgrade 3 to 4, 2 to 3, or 1 to 2, but not
+# 4 to 5. If the upgrade box is ticked, it consumes two sequence numbers:
+# one to check for an upgrade, then a second one for the new property.
 use strict;
 use warnings;
 use lib 'lib';
 use Grindia;
 use JSON qw( decode_json );
 
-die "usage: $0 tier upgrade count\n" if @ARGV < 1 || @ARGV > 3;
-my ($tier, $upgrade, $count) = @ARGV;
-$count ||= 20;
+die "usage: $0 [count]\n" if @ARGV > 1;
+my $count = $ARGV[0] || 20;
 
 my $max_tier = 5;
-my %upgrade_chance = (
-   1 => f32(0.30),
-   2 => f32(0.25),
-   3 => f32(0.15),
-   4 => f32(0.05),
-   5 => f32(0.01),
-);
 
 my $ctx = Grindia::get_context('data');
-my $factory;
-$ctx->for_type('ItemFactoryBonusData', sub { $factory = $_[0] });
+my (@tiers, @len);
+$ctx->for_type('ItemFactoryBonusData', sub {
+   my ($obj) = @_;
+   for my $tier (1 .. $max_tier) {
+      my $bonuses = $obj->{"tier$tier"} or die;
+      my @names;
+      my $len = 0;
+      foreach my $bonus (@$bonuses) {
+         my $name = $bonus->{title} or die;
+         $name =~ s/\s+/ /g;
+         $name =~ s/^ //;
+         $name =~ s/ $//;
+         $name =~ s/^Tiny /T./;
+         $name =~ s/^Lesser /l./;
+         $name =~ s/^Small /S./;
+         $name =~ s/^Large /L./;
+         push @names, $name;
+         $len = length($name) if length($name) > $len;
+      }
+      $tiers[$tier] = \@names;
+      $len[$tier] = $len;
+   }
+});
+$len[$max_tier] = 1;
 
 my $MASK = 0xffffffff;
 my ($R0, $R1, $R2, $R3);
@@ -38,14 +56,15 @@ my ($R0, $R1, $R2, $R3);
 }
 
 for my $i (1 .. $count) {
-   if ($upgrade && $tier < $max_tier) {
-      $tier++ if float_rand() < $upgrade_chance{$tier};
+   my $rand = get_rand();
+   my $up = upgrade($rand);
+   printf "%3d %d", $i, $up;
+   for my $tier (1 .. $max_tier) {
+      my $names = $tiers[$tier];
+      my $name = $names->[$rand % @$names];
+      printf " %-*s", $len[$tier], $names->[$rand % @$names];
    }
-   my $bonuses = $factory->{"tier$tier"} or die;
-   my $bonus = $bonuses->[get_rand() % @$bonuses];
-   my $out = "$i: T$tier $bonus->{title}: $bonus->{desc}";
-   $out =~ s/\s+/ /g;
-   print $out, "\n";
+   print "\n";
 }
 
 sub f32 {
@@ -54,9 +73,20 @@ sub f32 {
 }
 
 BEGIN {
-my $SCALE = f32(1.0 / 0x7fffff);
-sub float_rand {
-   return f32((get_rand() & 0x7fffff) * $SCALE);
+my $BITS = 0x7fffff;
+my $SCALE = f32(1.0 / $BITS);
+my $UP1 = f32(0.30);
+my $UP2 = f32(0.25);
+my $UP3 = f32(0.15);
+my $UP4 = f32(0.05);
+sub upgrade {
+   my ($x) = @_;
+   $x = f32(($x & $BITS) * $SCALE);
+   return 0 if $x >= $UP1;
+   return 1 if $x >= $UP2;
+   return 2 if $x >= $UP3;
+   return 3 if $x >= $UP4;
+   return 4;
 }
 }
 

@@ -1,9 +1,10 @@
 #!/usr/bin/env perl
 # Predict item reforge results using the random seed in savefile.json
 # First column is the sequence number. Second column is the maximum upgrade
-# tier; for example, a 3 will upgrade 3 to 4, 2 to 3, or 1 to 2, but not
+# rank; for example, a 3 will upgrade 3 to 4, 2 to 3, or 1 to 2, but not
 # 4 to 5. If the upgrade box is ticked, it consumes two sequence numbers:
-# one to check for an upgrade, then a second one for the new property.
+# one to check for an upgrade, then a second one for the new bonus.
+# Maximum sequence number can be given as a command-line argument.
 use strict;
 use warnings;
 use lib 'lib';

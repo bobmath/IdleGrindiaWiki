@@ -18,13 +18,13 @@ my %slots = (
 # source: ItemUpgradeManager.GetEnhanceCost
 my %tier_mult = (
    1 => 1,
-   2 => 8,
-   3 => 12,
-   4 => 22,
-   5 => 42,
-   6 => 86,
-   7 => 225,
-   8 => 750,
+   2 => 6,
+   3 => 10,
+   4 => 18,
+   5 => 36,
+   6 => 72,
+   7 => 175,
+   8 => 600,
 );
 
 sub build {

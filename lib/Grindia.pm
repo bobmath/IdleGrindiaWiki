@@ -492,22 +492,22 @@ sub describe_buff {
          $targ ? '' : ' self', $time;
    }
    elsif ($type == 5) {
-      $desc .= sprintf "Deal %s damage over %s",
+      $desc .= sprintf "Deal %s damage/sec for %s",
          Grindia::numfmt($buff->{value1}), $time;
    }
    elsif ($type == 6) {
-      $desc .= sprintf "Deal %s Physical damage over %s",
+      $desc .= sprintf "Deal %s Physical damage/sec for %s",
          Grindia::numfmt($buff->{value1}), $time;
    }
    elsif ($type == 7) {
-      $desc .= sprintf "Deal %s Magic damage over %s",
+      $desc .= sprintf "Deal %s Magic damage/sec for %s",
          Grindia::numfmt($buff->{value1}), $time;
    }
    elsif ($type == 8) {
       $desc .= sprintf "Heal %s Health", Grindia::numfmt($buff->{value1});
    }
    elsif ($type == 9) {
-      $desc .= sprintf "Heal %s Health over %s",
+      $desc .= sprintf "Heal %s Health/sec for %s",
          Grindia::numfmt($buff->{value1}), $time;
    }
    elsif ($type == 10) {
@@ -546,7 +546,7 @@ sub describe_buff {
          $buff->{value1}*100, $time, $buff->{value2}*100;
    }
    elsif ($type == 19) {
-      $desc .= sprintf "Deal %g%% Magic damage over %s, then deal %s%%",
+      $desc .= sprintf "Deal %g%% Magic damage/sec for %s, then deal %s%%",
          $buff->{value1}*100, $time, $buff->{value2}*100;
    }
    elsif ($type == 20) {
@@ -557,8 +557,9 @@ sub describe_buff {
       $desc .= sprintf "Fill %g%% of%s attack bar", $buff->{value1}/10, $whose;
    }
    elsif ($type == 22) {
-      $desc .= sprintf "Gain %g%% Shield", $buff->{value1};
-      $desc .= ' over ' . $time if $buff->{duration};
+      $time = 'one timestep' unless $buff->{duration};
+      $desc .= sprintf "Gain %g%% Shield/sec for %s",
+         $buff->{value1}, $time;
    }
    elsif ($type == 23) {
       $desc .= sprintf "Increase%s %s for %s",

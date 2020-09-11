@@ -557,7 +557,6 @@ sub describe_buff {
       $desc .= sprintf "Fill %g%% of%s attack bar", $buff->{value1}/10, $whose;
    }
    elsif ($type == 22) {
-      $time = 'one timestep' unless $buff->{duration};
       $desc .= sprintf "Gain %g%% Shield/sec for %s",
          $buff->{value1}, $time;
    }
@@ -639,6 +638,7 @@ sub two_vals {
 
 sub format_time {
    my ($t) = @_;
+   return 'one timestep' unless $t;
    return sprintf '%g sec', $t if $t <= 120;
    return sprintf '%.0f min', $t/60 if $t <= 120*60;
    return sprintf '%.0f hr', $t/(60*60);

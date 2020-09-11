@@ -27,9 +27,9 @@ sub build {
          $obj->{name} =~ /(Dungeon|Raid) (\d+) .*?(\d+)/ or return;
       $world += 0;
       $tier = ($tier + 0) || $world;
-      return if $world > 7 || $tier > 9;
+      return if $world > 7;
       my $levels = $obj->{area}{enemy_levels} or return;
-      return if $levels->[0] > 1e5;
+      return if $levels->[0] > 1e6;
       $dungeons{$world}{$type}{$tier} = $obj;
    });
 
@@ -81,7 +81,8 @@ sub show_dungeon {
          my $curve = $enemy->{curve} or next;
          my $hp = Grindia::numfmt(
             $curve->{base}[0] + $level * $curve->{gain}[0]);
-         print $OUT "| $enemy->{title}<br>Level $level<br>HP $hp\n";
+         $level = Grindia::numfmt($level);
+         print $OUT "| $enemy->{title}<br>Lvl $level<br>HP $hp\n";
       }
    }
    print $OUT qq[|}\n\n];
@@ -186,7 +187,7 @@ sub show_timers {
    open my $OUT, '>', 'wiki/Dungeons/Timers' or return;
    print $OUT qq[{| class="wikitable"\n|-\n],
       "! Tier || [[File:Clock.png]] Dungeon || [[File:Clock.png]] Raid \n";
-   foreach my $tier (1 .. 9) {
+   foreach my $tier (1 .. 12) {
       print $OUT "|-\n| $tier";
       foreach my $type (qw[ Dungeon Raid ]) {
          my $time = $dungeons->{1}{$type}{$tier}{max_time} or die;

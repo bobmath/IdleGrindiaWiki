@@ -79,11 +79,11 @@ sub build {
 
 sub dungeon_enemies {
    my ($enemies, $stats, $loc, $world, $tier, $area) = @_;
-   return if $world > 7 || $tier > 9;
+   return if $world > 7;
    $tier = $world if $tier < 1;
    my $area_enemies = $area->{enemies};
    my $levels = $area->{enemy_levels};
-   return if $levels->[0] > 1e5;
+   return if $levels->[0] > 1e6;
    $stats = $stats->{$tier} ||= {};
 
    for my $i (0 .. $#$area_enemies) {
@@ -197,8 +197,9 @@ sub write_stats {
    }
    print $OUT "|Loc=$where\n";
 
-   my $lvl = $rec->{lvl_lo};
-   $lvl .= '–' . $rec->{lvl_hi} if $rec->{lvl_hi} > $rec->{lvl_lo};
+   my $lvl = Grindia::numfmt($rec->{lvl_lo});
+   my $hi = Grindia::numfmt($rec->{lvl_hi});
+   $lvl .= '–' . $hi if $hi ne $lvl;
    print $OUT "|Lvl=$lvl\n";
 
    my %stats;

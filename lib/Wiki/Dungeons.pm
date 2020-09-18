@@ -193,8 +193,8 @@ sub show_timers {
          my $time = $dungeons->{1}{$type}{$tier}{max_time} or die;
          foreach my $world (2 .. 7) {
             my $dung = $dungeons->{$world}{$type}{$tier} or next;
-            die "time different W$world T$tier $type"
-               unless $dung->{max_time} == $time;
+            warn "time different W$world T$tier $type " .
+               "($dung->{max_time}, $time)" unless $dung->{max_time} == $time;
          }
          my $mins = $time / 60;
          my $hrs = int($mins / 60);

@@ -162,7 +162,7 @@ sub write_enemies {
       open my $OUT, '>:utf8', "wiki/Enemies/$file" or die;
       print $OUT "[[File:$type.png|right]]\n",
          "The '''$type''' is a [[World $tiers[0]]] [[Enemy]] ",
-         "in [[Idle Grindia]].{{Clear}}\n\n";
+         "in [[Idle Grindia]].\n\n";
       foreach my $tier (@tiers) {
          print $OUT "==Tier $tier==\n";
          my @records = sort { $a->{lvl_lo} <=> $b->{lvl_lo}

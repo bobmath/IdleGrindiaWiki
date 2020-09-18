@@ -447,7 +447,7 @@ my %buff_icons = (
    10 => 'Buff_Shield.png',
    11 => 'Buff_Counter.png',
    12 => 'Cleanse.png',
-   13 => 'Dispell.png',
+   13 => 'Dispel.png',
    14 => 'Buff_Attack.png',
    17 => 'Buff_Attack.png',
    20 => 'Buff_Attack.png',
@@ -456,6 +456,8 @@ my %buff_icons = (
    24 => 'Buff_Attack.png',
    25 => 'Buff_Attack.png',
    26 => 'Buff_Attack.png',
+   29 => 'Buff_Attack.png',
+   30 => 'Buff_Attack.png',
 );
 
 sub describe_buff {

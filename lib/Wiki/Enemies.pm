@@ -47,9 +47,12 @@ our %enemy_types = (
 );
 
 our %enemy_images = (
+   'Cactus'    => 'Enemy Cactus',
+   'Dungeon Master Sphinx' => 'Sphinx',
+   'Fish'      => 'Piranha',
    'Slime'     => 'Green Slime',
-   'Zombie'    => 'Enemy Zombie',
    'TREE DUDE' => 'Tree Dude',
+   'Zombie'    => 'Enemy Zombie',
 );
 
 my @stats = qw( HP STR INT END WIS SPD CrCh CrDmg CrRes

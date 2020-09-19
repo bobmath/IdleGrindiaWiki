@@ -2,6 +2,7 @@ package Wiki::Dungeons;
 use utf8;
 use strict;
 use warnings;
+use Wiki::Enemies;
 
 my @pet_order = ( 'Fox', 'Hare', 'Owl', 'Unicorn', 'Rat', 'Dog', 'Turtle',
    'Dolphin', 'Lizard', 'Cactus', 'Cat', 'Ghost', 'Slime Squared', 'Slime' );
@@ -11,12 +12,30 @@ my %short = (
    'Slime Squared' => 'Slime²',
 );
 
+my @stats = (
+   ['CrCh', 6],
+   ['CrDmg', 7],
+   ['CrRes', 8],
+   ['CrArm', 17],
+   ['DeAcc', 18],
+   ['DeRes', 9],
+   ['Dodge', 14],
+   ['FirStr', 16],
+);
+
 my @resources = qw( Coin Bronze Silver Gold );
 for my $i (1 .. 8) {
    for my $j (1 .. 3) {
       push @resources, "Jewel|$i|$j";
    }
 }
+
+my %difficulty = (
+   9  => 'Hard Mode',
+   10 => 'Extreme',
+   11 => 'Savage',
+   12 => 'Impossible',
+);
 
 sub build {
    my ($ctx) = @_;
@@ -67,32 +86,52 @@ sub show_dungeon {
    }
    print $OUT $_, "\n" foreach sort keys %titles;
 
-   print $OUT "==Enemies==\n",
-      qq[{| class="wikitable"\n];
    foreach my $tier (@tiers) {
       my $dung = $tiers->{$tier};
       my $area = $dung->{area};
+      my $lbl = "Tier $tier";
+      if ($tier == $tiers[0]) {
+         $lbl .= ' (Story)';
+      }
+      elsif (my $diff = $difficulty{$tier}) {
+         $lbl .= " ($diff)";
+      }
+      print $OUT "==$lbl==\n",
+         qq[{| class="wikitable"\n],
+         "|-\n",
+         "! Num || Icon || Enemy || Level || HP || STR || INT || END || WIS",
+         " || SPD\n";
+
       my $enemies = $area->{enemies};
       my $levels = $area->{enemy_levels};
-      print $OUT "|-\n| Tier $tier\n";
       foreach my $i (0 .. $#$enemies) {
          my $enemy = $enemies->[$i] or next;
+         my $type = $Wiki::Enemies::enemy_types{$enemy->{type}} or next;
+         my $pic = $Wiki::Enemies::enemy_images{$type} || $type;
          my $level = $levels->[$i] || 0;
-         my $curve = $enemy->{curve} or next;
-         my $hp = Grindia::numfmt(
-            $curve->{base}[0] + $level * $curve->{gain}[0]);
-         $level = Grindia::numfmt($level);
-         print $OUT "| $enemy->{title}<br>Lvl $level<br>HP $hp\n";
+         print $OUT qq[|- align="center"\n],
+            "| " , $i+1, " || [[File:$pic.png|50x30px]]",
+            " || [[$type#Tier $tier|$enemy->{title}]]\n",
+            "| ", Grindia::numfmt($level);
+         my $base = $enemy->{curve}{base};
+         my $gain = $enemy->{curve}{gain};
+         for my $j (0 .. 4) {
+            my $val = $base->[$j] + $gain->[$j] * $level;
+            print $OUT " || ", Grindia::numfmt($val+1);
+         }
+         my $spd = $base->[5] + 1;
+         print $OUT " || $spd\n";
       }
-   }
-   print $OUT qq[|}\n\n];
+      print $OUT qq[|}\n\n];
 
-   print $OUT "==Resources==\n",
-      qq[{| class="wikitable"\n];
-   foreach my $tier (@tiers) {
-      my $dung = $tiers->{$tier};
-      print $OUT "|-\n| Tier $tier\n";
       my @out;
+      my $base = $enemies->[-1]{curve}{base};
+      foreach my $stat (@stats) {
+         push @out, "$stat->[0] $base->[$stat->[1]]";
+      }
+      print $OUT "'''Stats''' ", join(', ', @out), "\n\n";
+
+      @out = ();
       for my $i (1 .. 3) {
          my $range = $dung->{"crafting_reward$i"};
          my $lo = Grindia::numfmt($range->[0]);
@@ -100,7 +139,8 @@ sub show_dungeon {
          $lo .= '–' . $hi if $hi ne $lo;
          push @out, "{{$resources[$i]|$lo}}";
       }
-      print $OUT "| ", join("<br>", @out), "\n";
+      print $OUT "'''Rewards''' @out\n\n" if @out;
+
       my $rewards = $dung->{resource_rewards};
       @out = ();
       for my $i (0 .. $#$rewards) {
@@ -110,15 +150,10 @@ sub show_dungeon {
          $lo .= '–' . $hi if $hi ne $lo;
          push @out, "{{$resources[$i]|$lo}}";
       }
-      print $OUT "| ", join("<br>", @out), "\n";
-   }
-   print $OUT qq[|}\n\n];
+      print $OUT "'''Random Rewards''' @out\n\n" if @out;
 
-   print $OUT "==Pet Shards==\n",
-      qq[{| class="wikitable"\n];
-   foreach my $tier (@tiers) {
-      my $pets = $tiers->{$tier}{shard_drops} or next;
-      my @out;
+      my $pets = $dung->{shard_drops};
+      @out = ();
       for my $i (0 .. $#$pets) {
          my $num = $pets->[$i] or next;
          $shards->{$i}{$tier} = $num;
@@ -126,26 +161,20 @@ sub show_dungeon {
          my $short = $short{$name} || $name;
          push @out, "{{PetShard|$name|$short ×$num}}";
       }
-      print $OUT "|-\n| Tier $tier\n| ", join(", ", @out), "\n";
-   }
-   print $OUT qq[|}\n\n];
+      print $OUT "@out\n\n" if @out;
 
-   my @rows;
-   foreach my $tier (@tiers) {
-      my $artifacts = $tiers->{$tier}{artifact_drops} or next;
-      my @out;
+      my $artifacts = $dung->{artifact_drops};
+      @out = ();
       for my $i (0 .. $#$artifacts) {
          my $num = $artifacts->[$i] or next;
          my $name = $artifacts[$i] || "artifact$i";
          push @out, "{{Artifact|$name|$name ×$num}}";
       }
-      push @rows, "|-\n| Tier $tier\n| " . join(", ", @out) . "\n"
-         if @out;
+      print $OUT "@out\n\n" if @out;
+
+      print $OUT "[[File:Clock.png]] Win ", format_time($dung->{max_time}),
+         ", Lose ", format_time($dung->{fail_time}), "\n\n";
    }
-   print $OUT "==Artifacts==\n",
-      qq[{| class="wikitable"\n],
-      @rows,
-      qq[|}\n\n] if @rows;
 
    print $OUT "[[Category:Dungeons and Raids]]\n";
    close $OUT;
@@ -212,6 +241,21 @@ sub show_timers {
    }
    print $OUT qq[|}\n];
    close $OUT;
+}
+
+sub format_time {
+   my ($time) = @_;
+   my $mins = $time / 60;
+   my $hrs = int($mins / 60);
+   $mins = int($mins - 60*$hrs + 0.5);
+   if ($hrs) {
+      my $str = "$hrs hr";
+      $str .= " $mins min" if $mins;
+      return $str;
+   }
+   else {
+      return "$mins min";
+   }
 }
 
 1 # end Dungeons.pm

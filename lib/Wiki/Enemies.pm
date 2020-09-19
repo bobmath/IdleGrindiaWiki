@@ -3,7 +3,7 @@ use utf8;
 use strict;
 use warnings;
 
-my %enemy_types = (
+our %enemy_types = (
    1  => 'Slime',
    2  => 'Goblin',
    3  => 'Wasp',
@@ -44,6 +44,12 @@ my %enemy_types = (
    #38 => 'Dragon Whelp',
    #39 => 'Dragon Defender',
    #40 => 'The Dragon',
+);
+
+our %enemy_images = (
+   'Slime'     => 'Green Slime',
+   'Zombie'    => 'Enemy Zombie',
+   'TREE DUDE' => 'Tree Dude',
 );
 
 my @stats = qw( HP STR INT END WIS SPD CrCh CrDmg CrRes
@@ -160,7 +166,8 @@ sub write_enemies {
       my @tiers = sort { $a <=> $b } keys %$tiers;
       (my $file = $type) =~ s/\s+/_/g;
       open my $OUT, '>:utf8', "wiki/Enemies/$file" or die;
-      print $OUT "[[File:$type.png|right]]\n",
+      my $pic = $enemy_images{$type} || $type;
+      print $OUT "[[File:$pic.png|right]]\n",
          "The '''$type''' is a [[World $tiers[0]]] [[Enemy]] ",
          "in [[Idle Grindia]].\n\n";
       foreach my $tier (@tiers) {

@@ -42,7 +42,13 @@ sub write_file {
    my $enc = $cont->{encoding} || '';
    my $size = $cont->{size} || 0;
    $text = decode_base64($text) if $enc eq 'base64';
-   die "wrong size for $file" unless $size == length($text);
+   if ($size != length($text)) {
+      #if (open my $BAD, '>:raw', 'bad') {
+      #   print $BAD $text;
+      #   close $BAD;
+      #}
+      die "wrong size for $file (want $size, got " . length($text) . ")\n";
+   }
    print $file, "\n";
    open my $OUT, '>:raw', $file or die "Can't write $file: $!";
    if ($text =~ /^\x1f\x8b/) {

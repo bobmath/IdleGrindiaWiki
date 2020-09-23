@@ -2,6 +2,7 @@ package Wiki::Dungeons;
 use utf8;
 use strict;
 use warnings;
+use List::Util qw( max );
 use Wiki::Enemies;
 
 my @pet_order = ( 'Fox', 'Hare', 'Owl', 'Unicorn', 'Rat', 'Dog', 'Turtle',
@@ -171,6 +172,14 @@ sub show_dungeon {
          push @out, "{{Artifact|$name|$name ×$num}}";
       }
       print $OUT "@out\n\n" if @out;
+
+      {
+         my $acc = $dung->{accessory_level_range};
+         my $lo = Grindia::numfmt($acc->[0]);
+         my $hi = Grindia::numfmt(max($acc->[1] * 1.3, $acc->[1] + 3));
+         $lo .= '–' . $hi if $hi ne $lo;
+         print $OUT "[[File:Accessory.png|Accessory]] Level $lo\n\n";
+      }
 
       print $OUT "[[File:Clock.png]] Win ", format_time($dung->{max_time}),
          ", Lose ", format_time($dung->{fail_time}), "\n\n";

@@ -15,18 +15,6 @@ my %slots = (
    'Body' => 'Armor',
 );
 
-# source: ItemUpgradeManager.GetEnhanceCost
-my %tier_mult = (
-   1 => 1,
-   2 => 6,
-   3 => 10,
-   4 => 18,
-   5 => 36,
-   6 => 72,
-   7 => 175,
-   8 => 600,
-);
-
 sub build {
    my ($ctx) = @_;
    my %recipes;
@@ -49,6 +37,8 @@ sub build {
          show_recipes($OUT, $tier, $recipes->{$slot}, $slots{$slot} || $slot);
       }
       show_enhance($OUT, $tier);
+      show_reforge($OUT, $tier);
+      print $OUT "[[Category:Forge]]\n";
       close $OUT;
    }
 }
@@ -213,6 +203,18 @@ sub format_cost {
    return join('<br>', @cost);
 }
 
+# source: ItemUpgradeManager.GetEnhanceCost
+my %tier_mult = (
+   1 => 1,
+   2 => 6,
+   3 => 10,
+   4 => 18,
+   5 => 36,
+   6 => 72,
+   7 => 175,
+   8 => 600,
+);
+
 sub show_enhance {
    my ($OUT, $tier) = @_;
    print $OUT "==Enhance==\n",
@@ -270,7 +272,7 @@ sub show_enhance {
       }
    }
 
-   print $OUT qq[|}\n\n[[Category:Forge]]\n];
+   print $OUT qq[|}\n\n];
 }
 
 sub enhance_cost {
@@ -464,6 +466,74 @@ sub enhance_cost {
       $cost->{Silver} = (5*36*$enhance + 65) * $mul;
    }
    return $cost;
+}
+
+# source: ItemRerollManager.GetRerollCost
+my %reforge_cost = (
+   1 => [['Coin', 1500], ['Bronze', 250000], ['Jewel|1|1', 300]],
+   2 => [['Coin', 16500], ['Silver', 275000], ['Jewel|2|1', 3300]],
+   3 => [['Coin', 181500], ['Silver', 302500], ['Jewel|4|1', 4800]],
+   4 => [['Coin', 1996500], ['Gold', 3327500], ['Jewel|6|1', 33300]],
+   5 => [['Coin', 219615000], ['Gold', 366025000], ['Jewel|7|1', 49800]],
+);
+my %upgrade_cost = (
+   1 => [['Jewel|2|1', 45]],
+   2 => [['Jewel|3|1', 495]],
+   3 => [['Jewel|5|1', 720]],
+   4 => [['Jewel|7|1', 4995]],
+   5 => [['Jewel|8|1', 7470]],
+);
+my %reforge_tier_cost = (
+   1 => 1,
+   2 => 1.2,
+   3 => 1.3,
+   4 => 1.4,
+   5 => 1.5,
+   6 => 1.55,
+   7 => 1.6,
+   8 => 1.7,
+);
+
+# source: ItemRerollManager.GetUpgradeChance
+my %upgrade_chance = (
+   1 => 30,
+   2 => 25,
+   3 => 15,
+   4 => 5,
+   5 => 1,
+);
+
+sub show_reforge {
+   my ($OUT, $tier) = @_;
+   my $mult = 1;
+   for my $t (2 .. $tier) {
+      $mult *= $reforge_tier_cost{$t};
+   }
+
+   print $OUT "==Reforge==\n",
+      qq[{| class="wikitable"\n],
+      "|-\n! Rank || Reforge Cost || Upgrade Cost || Upgrade Chance\n";
+
+   for my $rank (1 .. 5) {
+      print $OUT qq[|- align="center"\n],
+         "| $rank\n",
+         "| ", reforge_cost($reforge_cost{$rank}, $mult), "\n",
+         "| ", reforge_cost($upgrade_cost{$rank}, $mult), "\n",
+         "| ", $upgrade_chance{$rank}, "\n";
+   }
+
+   print $OUT qq[|}\n\n];
+}
+
+sub reforge_cost {
+   my ($list, $mult) = @_;
+   return unless $list;
+   my @out;
+   foreach my $cost (@$list) {
+      my $val = Grindia::numfmt($cost->[1] * $mult);
+      push @out, "{{$cost->[0]|$val}}";
+   }
+   return join ', ', @out;
 }
 
 1 # end Recipes.pm

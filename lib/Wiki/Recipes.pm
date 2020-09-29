@@ -134,12 +134,12 @@ sub show_recipes {
 
    print $OUT qq[{| class="wikitable"\n],
       "|-\n! Name\n",
-      "! [[File:Stars0.png]]<br>+20\n",
-      "! [[File:Stars1.png]]<br>+40\n",
-      "! [[File:Stars2.png]]<br>+60\n",
-      "! [[File:Stars3.png]]<br>+80\n",
-      "! [[File:Stars4.png]]<br>+100\n",
-      "! [[File:Stars5.png]]<br>+150\n";
+      "! [[File:Stars0.png|0 Stars]]<br>+20\n",
+      "! [[File:Stars1.png|1 Star]]<br>+40\n",
+      "! [[File:Stars2.png|2 Stars]]<br>+60\n",
+      "! [[File:Stars3.png|3 Stars]]<br>+80\n",
+      "! [[File:Stars4.png|4 Stars]]<br>+100\n",
+      "! [[File:Stars5.png|5 Stars]]<br>+150\n";
    foreach my $level (sort keys %$levels) {
       my $item = $levels->{$level}{items}[0];
       print $OUT "|-\n| $item->{name}";
@@ -519,7 +519,7 @@ sub show_reforge {
          "| $rank\n",
          "| ", reforge_cost($reforge_cost{$rank}, $mult), "\n",
          "| ", reforge_cost($upgrade_cost{$rank}, $mult), "\n",
-         "| ", $upgrade_chance{$rank}, "\n";
+         "| ", $upgrade_chance{$rank}, "%\n";
    }
 
    print $OUT qq[|}\n\n];

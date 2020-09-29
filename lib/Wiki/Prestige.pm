@@ -28,10 +28,12 @@ sub build {
          $str =~ s/\s+/ /g;
          $str =~ s/\s$//;
          $str =~ s/(\d+) (\d{3})/$1$2/;
+         $str =~ s/^Gold Drop /Coins Drop /;
          my $base = $str;
          if ($base =~ s/\+(\d+)(%?)/*/) {
             my $old = $total{$base};
             my $new = $total{$base} += $1;
+            $new = Grindia::numfmt($new);
             $str .= " (total $new$2)" if $old;
          }
          $n++;

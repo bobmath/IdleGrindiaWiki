@@ -92,12 +92,10 @@ sub upgrade {
 }
 
 sub get_rand {
-   my $x = $R0;
+   my $x = $R0 ^ (($R0 << 11) & $MASK);
    $R0 = $R1;
    $R1 = $R2;
    $R2 = $R3;
-   $x ^= ($x << 11) & $MASK;
-   $x ^= $x >> 8;
-   return $R3 ^= ($R3 >> 19) ^ $x;
+   return $R3 ^= ($R3 >> 19) ^ $x ^ ($x >> 8);
 }
 

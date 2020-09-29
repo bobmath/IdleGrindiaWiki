@@ -58,14 +58,7 @@ sub build {
    foreach my $world (1 .. 7) {
       my $dung = $dungeons{$world};
       foreach my $type (sort keys %$dung) {
-         my $name = $type eq 'Dungeon'
-            ? Grindia::dungeon_name($world)
-            : Grindia::raid_name($world);
-         my $shards = {};
-         show_dungeon($dung->{$type}, $name, $shards);
-         while (my ($id, $tiers) = each %$shards) {
-            $shards{$id}{$world}{$type} = $tiers;
-         }
+         show_dungeon($world, $type, $dung->{$type}, \%shards);
       }
    }
    show_pets(\%shards);
@@ -73,7 +66,9 @@ sub build {
 }
 
 sub show_dungeon {
-   my ($tiers, $name, $shards) = @_;
+   my ($world, $what, $tiers, $shards) = @_;
+   my $name = $what eq 'Dungeon' ? Grindia::dungeon_name($world)
+      : Grindia::raid_name($world);
    $name =~ s/\s+/_/g;
    open my $OUT, '>:utf8', "wiki/Dungeons/$name" or die;
 
@@ -157,7 +152,7 @@ sub show_dungeon {
       @out = ();
       for my $i (0 .. $#$pets) {
          my $num = $pets->[$i] or next;
-         $shards->{$i}{$tier} = $num;
+         $shards->{$i}{$world}{$what}{$tier} = $num;
          my $name = $pet_order[$i] || "pet$i";
          my $short = $short{$name} || $name;
          push @out, "{{PetShard|$name|$short ×$num}}";

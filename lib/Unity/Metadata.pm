@@ -30,6 +30,7 @@ sub extract {
    read_rgctx($meta);
    read_vtables($meta);
    read_code($meta, $codedir);
+   annotate_code($meta, $codedir);
    write_types($meta, 'types.txt');
    write_record($metadir . 'memtables.txt', $meta->{memtables});
    write_records($metadir, 'typeinfo', $meta->{typeinfo});
@@ -149,7 +150,7 @@ sub read_code {
    }
    close $TBL;
 
-   my %dyncalls;
+   my $dyncalls = $meta->{dyncalls} = {};
    open my $IN, '<:utf8', $dir . 'code.txt' or return;
    my $curr = '';
    while (<$IN>) {
@@ -158,24 +159,28 @@ sub read_code {
          $curr =~ s/^dynCall_// or $curr = '';
       }
       elsif ($curr && /call_indirect \{\(loc0 & (\d+)\) \+ (\d+)\}/) {
-         $dyncalls{$curr} = [ @table[$2 .. $2+$1] ];
+         $dyncalls->{$curr} = [ @table[$2 .. $2+$1] ];
       }
       elsif ($curr && /call_indirect \{loc0 & (\d+)\}/) {
-         $dyncalls{$curr} = [ @table[0 .. $1] ];
+         $dyncalls->{$curr} = [ @table[0 .. $1] ];
       }
    }
+}
 
+sub annotate_code {
+   my ($meta, $dir) = @_;
+   my $dyncalls = $meta->{dyncalls};
    my %funcs;
    foreach my $meth (@{$meta->{methods}}) {
       if (defined(my $ptr = $meth->{method_ptr})) {
-         my $num = $dyncalls{$meth->{shortsig}}[$ptr] or next;
+         my $num = $dyncalls->{$meth->{shortsig}}[$ptr] or next;
          $meth->{method_num} = $num;
          push @{$funcs{$num}}, $meth->{fullname};
       }
       my $inst = $meth->{instants} or next;
       foreach my $sig (sort keys %$inst) {
          my $info = $inst->{$sig};
-         my $num = $dyncalls{$info->{shortsig}}[$info->{method_ptr}] or next;
+         my $num = $dyncalls->{$info->{shortsig}}[$info->{method_ptr}] or next;
          $info->{method_num} = $num;
          push @{$funcs{$num}},
             $meth->{_owner} . '.' . $meth->{basename} . $sig;
@@ -188,7 +193,7 @@ sub read_code {
          my $methods = $inst->{$sig};
          foreach my $name (sort keys %{$methods}) {
             my $info = $methods->{$name};
-            my $num = $dyncalls{$info->{shortsig}}[$info->{method_ptr}]
+            my $num = $dyncalls->{$info->{shortsig}}[$info->{method_ptr}]
                or next;
             $info->{method_num} = $num;
             push @{$funcs{$num}}, $type->{basename} . $sig . '.' . $name;
@@ -221,7 +226,7 @@ sub read_code {
    }
 
    print "Annotating code\n";
-   seek($IN, 0, 0) or die $!;
+   open my $IN, '<:utf8', $dir . 'code.txt' or return;
    open my $OUT, '>:utf8', $dir . 'anno.txt'
       or die "Can't write ${dir}anno.txt: $!\n";
    my $lookup = $meta->{usage_lookup};
@@ -232,7 +237,7 @@ sub read_code {
          $_ .= ' # ' . $name if defined $name;
       }
       elsif (/\binvoke_(\w+) \((\d+)/) {
-         my $addr = $dyncalls{$1}[$2];
+         my $addr = $dyncalls->{$1}[$2];
          $_ .= ' # ' . ($funcs{$addr} // $addr) if defined $addr;
       }
       elsif (/\bglob(\d+)\b/) {

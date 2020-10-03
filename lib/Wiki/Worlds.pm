@@ -87,20 +87,7 @@ sub describe_area {
       my $tier = ceil($enemy->{type} / 5);
       $tiers{$tier}++;
    }
-
-   my $min = $area->{level_min};
-   my $max = $area->{level_max};
    my $txt = join(',', sort keys %prefix) . ' || ';
-
-   my $levels = $area->{enemy_levels};
-   if ($levels && @$levels) {
-      $min = $max = $levels->[0];
-      foreach my $lvl (@$levels) {
-         $min = $lvl if $lvl < $min;
-         $max = $lvl if $lvl > $max;
-      }
-   }
-
    if (my @tiers = sort { $a <=> $b } keys %tiers) {
       $txt .= 'W';
       if (@tiers > 2 && $tiers[-1] - $tiers[0] == $#tiers) {
@@ -111,22 +98,33 @@ sub describe_area {
       }
    }
 
-   my $lvls = $max - $min + 1;
+   my @levels = @{$area->{enemy_levels}};
+   if (@levels) {
+      @levels = sort { $a <=> $b } @levels;
+   }
+   else {
+      @levels = $area->{level_min} .. $area->{level_max};
+   }
+   my $min = $levels[0];
+   my $max = $levels[-1];
+
    my $jewels = 0;
    my $coins = 0;
    my $craft = 0;
    my $break = find_break($min);
    my %breaks;
-   for my $lvl ($min .. $max) {
-      $break++ if $lvl >= $breakpoints[$break];
+   for my $lvl (@levels) {
+      $break++ while $lvl >= $breakpoints[$break];
       $breaks{$break} = 1;
       $jewels += $jewelmult[$break];
       $coins += $lvl ** 1.8;
       $craft += $lvl * $lvl;
    }
-   my $exp = $craft * $area->{exp_reward};
-   $coins *= $area->{gold_reward};
-   $craft *= $area->{craft_reward};
+   my $n = @levels;
+   $jewels /= $n;
+   my $exp = $craft * $area->{exp_reward} / $n;
+   $coins *= $area->{gold_reward} / $n;
+   $craft *= $area->{craft_reward} / $n;
    my $cmp = join ',', $txt, sort keys %breaks;
 
    if (($num-1)%$step && @$out && $out->[-1]{cmp} eq $cmp) {
@@ -134,7 +132,6 @@ sub describe_area {
       $prev->{zone_hi} = $num;
       $prev->{lvl_lo} = $min if $min < $prev->{lvl_lo};
       $prev->{lvl_hi} = $max if $max > $prev->{lvl_hi};
-      $prev->{lvls} += $lvls;
       $prev->{jewels} += $jewels;
       $prev->{coins} += $coins;
       $prev->{exp} += $exp;
@@ -142,7 +139,7 @@ sub describe_area {
    }
    else {
       push @$out, { zone_lo=>$num, zone_hi=>$num,
-         lvls=>$lvls, lvl_lo=>$min, lvl_hi=>$max, txt=>$txt, cmp=>$cmp,
+         lvl_lo=>$min, lvl_hi=>$max, txt=>$txt, cmp=>$cmp,
          jewels=>$jewels, coins=>$coins, exp=>$exp, craft=>$craft};
    }
 }
@@ -154,7 +151,7 @@ sub show_areas {
       $zone .= '–' . $row->{zone_hi} if $row->{zone_hi} > $row->{zone_lo};
       my $lvls = $row->{lvl_lo};
       $lvls .= '–' . $row->{lvl_hi} if $row->{lvl_hi} > $row->{lvl_lo};
-      my $n = $row->{lvls};
+      my $n = $row->{zone_hi} - $row->{zone_lo} + 1;
       print $OUT "|-\n| $zone || $lvls || $row->{txt} ×",
          numfmt($row->{jewels} / $n), " || ",
          numfmt(52 * $row->{exp} / $n), " || ",

@@ -1,0 +1,145 @@
+#!/usr/bin/env perl
+# Feed code through STDIN to change mem[] references to field names.
+# Assumes it is being run from the code directory.
+# Often needs help to determine types of variables. Put
+#     loc#:TypeName
+# alone on a line as a hint.
+use strict;
+use warnings;
+
+my (%field_offsets, %field_names, %parent, %return_type, %args);
+{
+   my ($class, $method, $section);
+   open my $IN, '<:utf8', '../types.txt' or die;
+   while (<$IN>) {
+      if (/^name:\s*(\S*)/) {
+         $class = $1;
+         $section = '';
+         $method = undef;
+      }
+      elsif (/^parent:\s*(\S*)/) {
+         $parent{$class} = $1 if $class;
+      }
+      elsif (/^fields:/) {
+         $section = 'fields' if $class;
+         $method = undef;
+      }
+      elsif (/^methods:/) {
+         $section = 'methods' if $class;
+         $method = undef;
+      }
+      elsif (/^\S/) {
+         $section = '';
+         $method = undef;
+      }
+      elsif (/^$/) {
+         $class = undef;
+         $section = '';
+         $method = undef;
+      }
+      elsif ($section eq 'fields' && /^\s+(\S+)\s+(\S+)\s+(\d+)/) {
+         $field_offsets{$class}{$3} = $1;
+         $field_names{$class}{$1} = $2;
+      }
+      elsif ($section eq 'methods' && /^  \S+\s+(\S+)(.*)/) {
+         my ($type, $rest) = ($1, $2);
+         $method = undef;
+         if ($rest =~ /\s(\d+)$/) {
+            my $num = $1;
+            if (exists $return_type{$num}) {
+               $return_type{$num} = undef;
+               $args{$num} = undef;
+            }
+            else {
+               $method = $num;
+               $return_type{$num} = $type;
+               my $args = [];
+               push @$args, [ 'this', $class ] unless $rest =~ /\bstatic\b/;
+               $args{$num} = $args;
+            }
+         }
+      }
+      elsif ($method && /^    (\S+)\s+(\S+)$/) {
+         push @{$args{$method}}, [ $1, $2 ];
+      }
+   }
+   close $IN;
+}
+
+my %types;
+while (<>) {
+   if (/^func\s+(\d+)/) {
+      print;
+      $_ = '';
+      %types = ();
+      if (my $args = $args{$1}) {
+         my $num = 0;
+         foreach my $arg (@$args) {
+            my $loc = "loc$num";
+            $num++;
+            printf "# %s  %-10s  %s\n", $loc, $arg->[0], $arg->[1];
+            $types{$loc} = $arg->[1];
+         }
+      }
+   }
+   elsif (/^\s*(\w+)\s*:\s*(\S+)/) {
+      $types{$1} = $2;
+   }
+
+   my $changed = 1;
+   while ($changed) {
+      $changed = 0;
+      s{(mem_\w+\[([.\w\$<>]+)\+(\d+)\])}{
+         my $out = $1;
+         my $new = getfield($2, $3);
+         $changed = 1 if $new;
+         $new || $out;
+      }eg;
+   }
+
+   if (/^[\s\|]*(\w+)\s*=\s*(.*)/) {
+      my $var = $1;
+      $types{$var} = gettype($2);
+   }
+   print;
+}
+
+sub getfield {
+   my ($var, $off) = @_;
+   my @var = split /\./, $var or return;
+   my $type = $types{shift @var} or return;
+   foreach my $part (@var) {
+      my $next = $field_names{$type}{$part};
+      while (!$next) {
+         $type = $parent{$type} or return;
+         $next = $field_names{$type}{$part};
+      }
+      $type = $next;
+   }
+   my $field = $field_offsets{$type}{$off};
+   while (!$field) {
+      $type = $parent{$type} or return;
+      $field = $field_offsets{$type}{$off};
+   }
+   return "$var.$field";
+}
+
+sub gettype {
+   my ($expr) = @_;
+   if ($expr =~ /^call\s+(\d+)/) {
+      return $return_type{$1};
+   }
+   return if $expr =~ /[^.\w\$<>]/;
+   my @var = split /\./, $expr;
+   my $type = $types{shift @var} or return;
+   foreach my $part (@var) {
+      my $next = $field_names{$type}{$part};
+      while (!$next) {
+         $type = $parent{$type} or return;
+         $next = $field_names{$type}{$part};
+      }
+      $type = $next;
+   }
+   return $type;
+}
+

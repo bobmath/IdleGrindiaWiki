@@ -115,12 +115,13 @@ sub describe_effect {
 # source: BattleDebuffIconDisplay.DebuffIcons
 my %buff_icons = (
    0  => 'Debuff_Speed.png',
-   1  => 'Debuff_Attack.png',
-   2  => 'Debuff_Defense.png',
+   1  => 'Break_Weapon.png',
+   2  => 'Break_Armor.png',
    3  => 'Buff_Speed.png',
    4  => 'Stun.png',
    6  => 'Damage_Over_Time.png',
    7  => 'Damage_Over_Time.png',
+   8  => 'Cure_Spell.png',
    9  => 'Heal_Over_Time.png',
    10 => 'Buff_Shield.png',
    11 => 'Buff_Counter.png',

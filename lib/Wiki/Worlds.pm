@@ -153,20 +153,13 @@ sub show_areas {
       $lvls .= '–' . $row->{lvl_hi} if $row->{lvl_hi} > $row->{lvl_lo};
       my $n = $row->{zone_hi} - $row->{zone_lo} + 1;
       print $OUT "|-\n| $zone || $lvls || $row->{txt} ×",
-         numfmt($row->{jewels} / $n), " || ",
-         numfmt(52 * $row->{exp} / $n), " || ",
-         numfmt(80 * $row->{coins} / $n), " || ",
-         numfmt(70 * $row->{craft} / $n), " || ",
-         numfmt(0.25 * $row->{craft} / $n), " || ",
-         numfmt(0.0045 * $row->{craft} / $n), "\n";
+         Grindia::decfmt($row->{jewels} / $n), " || ",
+         Grindia::decfmt(52 * $row->{exp} / $n), " || ",
+         Grindia::decfmt(80 * $row->{coins} / $n), " || ",
+         Grindia::decfmt(70 * $row->{craft} / $n), " || ",
+         Grindia::decfmt(0.25 * $row->{craft} / $n), " || ",
+         Grindia::decfmt(0.0045 * $row->{craft} / $n), "\n";
    }
-}
-
-sub numfmt {
-   my ($x) = @_;
-   my $s = sprintf '%.4g', $x;
-   $s =~ s/(e-?)\+?0*/$1/;
-   return $s;
 }
 
 1 # end Worlds.pm

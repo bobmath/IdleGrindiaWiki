@@ -176,7 +176,8 @@ sub show_dungeon {
          print $OUT "[[File:Accessory.png|Accessory]] Level $lo\n\n";
       }
 
-      print $OUT "[[File:Clock.png]] Win ", format_time($dung->{max_time}),
+      print $OUT "[[File:Clock.png|Timer]] ",
+         "Win ", format_time($dung->{max_time}),
          ", Lose ", format_time($dung->{fail_time}), "\n\n";
    }
 

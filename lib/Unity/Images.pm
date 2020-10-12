@@ -5,7 +5,7 @@ use Image::PNG::Libpng ();
 use Image::PNG::Const qw( PNG_COLOR_TYPE_GRAY PNG_COLOR_TYPE_GRAY_ALPHA
    PNG_COLOR_TYPE_RGB PNG_COLOR_TYPE_RGB_ALPHA );
 
-my $image_guid = 'ee6c40817d2951929cdb4f5a60874f5d';
+my $image_guid = '512dc6156c2d621c9f03b4db6490f569';
 our ($seen, $dir);
 
 sub extract {

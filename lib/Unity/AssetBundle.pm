@@ -12,12 +12,15 @@ sub new {
    open $self->{file}, '<:raw', $filename or croak "Can't read $filename: $!";
    read($self->{file}, my $bytes, 16);
    my ($hdr_len, $file_len, $magic, $offset) = unpack 'N*', $bytes;
-   croak 'Bad bundle' if !defined($offset) || $magic != 0x11
+   croak 'Bad bundle' if !defined($offset) || $magic != 0x15
       || $hdr_len < 19 || $offset < $hdr_len+19 || $file_len < $offset
       || $file_len < -s $self->{file};
 
    $bytes = Unity::ByteStream->new($self->{file}, 16, $hdr_len + 3);
-   $bytes->skip(21);
+   $bytes->skip(4);
+   $bytes->read_cstr();
+   $bytes->skip(5);
+
    my @types;
    my $count = $bytes->read_int();
    for my $i (1 .. $count) {

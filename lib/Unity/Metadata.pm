@@ -15,22 +15,21 @@ sub extract {
    read_methods($meta);
    read_mem($meta, $codedir . 'mem0');
    find_typeinfo($meta);
-   find_codeinfo($meta);
+   #find_codeinfo($meta); # FIXME due to unity upgrade
    read_generics($meta);
    read_nested_types($meta);
    read_interfaces($meta);
    read_properties($meta);
    get_type_names($meta);
-   get_gen_methods($meta);
-   get_type_layouts($meta);
-   get_interop($meta);
+   #get_gen_methods($meta);
+   #get_type_layouts($meta);
+   #get_interop($meta);
    read_events($meta);
    read_defaults($meta);
    read_usage($meta);
-   read_rgctx($meta);
    read_vtables($meta);
    read_code($meta, $codedir);
-   annotate_code($meta, $codedir);
+   #annotate_code($meta, $codedir);
    write_types($meta, 'types.txt');
    write_record($metadir . 'memtables.txt', $meta->{memtables});
    write_records($metadir, 'typeinfo', $meta->{typeinfo});
@@ -60,7 +59,7 @@ sub write_types {
       if (my $fields = $type->{fields}) {
          print $OUT "fields:\n";
          foreach my $fld (@$fields) {
-            my $type = $fld->{type};
+            my $type = $fld->{type} // '???';
             if (defined(my $val = $fld->{default})) {
                if ($val =~ /[^-+.\w]/) {
                   $val =~ s{([\x00-\x1f\\"\x7f-\xa0])}
@@ -94,14 +93,15 @@ sub write_types {
       if ($methods) {
          print $OUT "methods:\n";
          foreach my $meth (@$methods) {
-            my $type = $meth->{return_type};
+            my $type = $meth->{return_type} // '???';
             $type .= '  static' if $meth->{static};
             $type .= '  virtual' if $meth->{virtual};
             printf $OUT "  %-16s  %s  %d\n", $meth->{name}, $type,
                $meth->{method_num} // -1;
             my $params = $meth->{params} or next;
             foreach my $param (@$params) {
-               printf $OUT "    %-16s  %s\n", $param->{name}, $param->{type};
+               printf $OUT "    %-16s  %s\n", $param->{name},
+                  $param->{type} // '???';
             }
             if (my $inst = $meth->{instants}) {
                foreach my $sig (sort keys %$inst) {
@@ -320,33 +320,12 @@ sub decode_ref {
       $rec->{ref} = $meta->{ustrings}{$idx};
    }
    elsif ($type == 6) {
-      my $spec = $meta->{meth_specs}[$idx] or next;
+      my $spec = $meta->{meth_specs}[$idx] or return;
       my $ref = $spec->{class};
       $ref .= $spec->{class_sig} if $spec->{class_sig};
       $ref .= '.' . $spec->{method};
       $ref .= $spec->{method_sig} if $spec->{method_sig};
       $rec->{ref} = $ref;
-   }
-}
-
-sub read_rgctx {
-   my ($meta) = @_;
-   my $rgctx = read_records($meta, 'rgctx', [
-      ['type', 'l'], # 1=type, 2=class, 3=method
-      ['index', 'l'] ]);
-   foreach my $rec (@$rgctx) {
-      my $type = $rec->{type};
-      if ($type == 1 || $type == 2) {
-         $rec->{class} = $meta->{typenames}[$rec->{index}];
-      }
-   }
-   foreach my $type (@{$meta->{typedefs}}) {
-      $type->{rgctx} = get_slice($rgctx,
-         $type->{rgctx_start}, $type->{rgctx_count});
-   }
-   foreach my $meth (@{$meta->{methods}}) {
-      $meth->{rgctx} = get_slice($rgctx,
-         $meth->{rgctx_start}, $meth->{rgctx_count});
    }
 }
 
@@ -485,11 +464,6 @@ sub read_methods {
       ['return_type_idx', 'l'],
       ['param_start', 'l'],
       ['generic_idx', 'l'],
-      ['method_idx', 'l'],
-      ['invoker_idx', 'l'],
-      ['delegate_idx', 'l'],
-      ['rgctx_start', 'l'],
-      ['rgctx_count', 'l'],
       ['token', 'L'],
       ['flags', 'S'],
       ['iflags', 'S'],
@@ -591,7 +565,6 @@ sub get_gen_methods {
       my $info = $spec->{info};
       $info->{method_ptr} = $meth_ptrs->[$methptr_idx];
       $info->{invoker} = $invoker_idx;
-      $info->{shortsig} = $meta->{invokers}{$invoker_idx} || $invoker_idx;
    }
 }
 
@@ -663,7 +636,6 @@ sub get_type_names {
       # 0x2000: has field marshal
    }
 
-   $meta->{invokers} = my $invokers = {};
    foreach my $meth (@$methods) {
       $meth->{declaring_type} = $typedefs->[$meth->{declaring_type_idx}]{name};
       my $info = $typeinfo->[$meth->{return_type_idx}];
@@ -679,8 +651,6 @@ sub get_type_names {
       }
       $sig .= 'i';
       $meth->{shortsig} = $sig;
-      my $inv = $meth->{invoker_idx};
-      $invokers->{$inv} = $sig if $inv >= 0;
    }
 }
 
@@ -690,10 +660,6 @@ sub find_codeinfo {
    my $memlen = length($meta->{mem});
    my $methods = $meta->{methods} or die 'missing methods';
    my $meth_count = 0;
-   for my $meth (@$methods) {
-      my $idx = $meth->{method_idx};
-      $meth_count++ if $idx >= 0;
-   }
 
    my $search = pack 'V', $meth_count;
    my (@hdr, @ptrs);
@@ -720,11 +686,6 @@ sub find_codeinfo {
    for my $i (0 .. 6) {
       $meta->{memtables}{$tables[$i]} =
          { count => $hdr[2*$i], off => $hdr[2*$i+1] };
-   }
-
-   foreach my $meth (@$methods) {
-      my $idx = $meth->{method_idx};
-      $meth->{method_ptr} = $ptrs[$idx] if $idx >= 0;
    }
 }
 
@@ -985,8 +946,6 @@ sub read_typedefs {
       ['declaring_type', 'l'],
       ['parent_type_idx', 'l'],
       ['element_type', 'l'],
-      ['rgctx_start', 'l'],
-      ['rgctx_count', 'l'],
       ['generic_idx', 'l'],
       ['flags', 'L'],
       ['field_start', 'l'],
@@ -1186,8 +1145,8 @@ sub read_meta {
    my @tables = qw( string_ptrs string_data strings events properties methods
       param_defaults field_defaults defaults field_sizes params fields
       gen_params gen_constraints generics nested_types interfaces vtables
-      interface_offsets typedefs rgctx images assemblies usage_lists
-      usage_pairs field_refs assembly_refs attribute_info attribute_types
+      interface_offsets typedefs images assemblies usage_lists usage_pairs
+      field_refs assembly_refs attribute_info attribute_types
       uvcp_types uvcp_ranges windows_types exported_types );
 
    my %tables;

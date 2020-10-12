@@ -2,7 +2,7 @@ package Unity::ByteStream;
 use strict;
 use warnings;
 use Carp qw( croak );
-use Encode qw( decode_utf8 );
+use Encode qw( decode decode_utf8 );
 
 sub new {
    my ($class, $file, $pos, $len) = @_;
@@ -144,12 +144,12 @@ sub read_str {
    return $str;
 }
 
-sub read_str_nopad {
+sub read_utf16 {
    my ($self) = @_;
-   my $len = unpack 'V', substr($self->{data}, $self->{pos}, 4);
+   my $len = unpack('V', substr($self->{data}, $self->{pos}, 4)) * 2;
    croak 'eof' unless defined $len;
    $self->{pos} += 4;
-   my $str = decode_utf8(substr($self->{data}, $self->{pos}, $len));
+   my $str = decode('utf16-le', substr($self->{data}, $self->{pos}, $len));
    $self->{pos} += $len;
    croak 'eof' if $self->{pos} > length($self->{data});
    return $str;
@@ -181,7 +181,7 @@ sub deserialize {
    my ($val, $lbl);
    if ($type & 1) {
       $self->skip(1);
-      $lbl = $self->read_str_nopad();
+      $lbl = $self->read_utf16();
       $type++;
    }
    if ($type == 2) {
@@ -190,7 +190,7 @@ sub deserialize {
       if ($kind == 0x2f) {
          my $num = $self->read_int();
          $self->skip(1);
-         $typename = $self->read_str_nopad();
+         $typename = $self->read_utf16();
          $self->{types}{$num} = $typename;
       }
       elsif ($kind == 0x30) {
@@ -198,7 +198,7 @@ sub deserialize {
          $typename = $self->{types}{$num} or die 'missing type';
       }
       else {
-         die 'wut';
+         die "wut? $kind";
       }
       $self->skip(4); # obj num
       $val = { _type => $typename };

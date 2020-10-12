@@ -332,7 +332,7 @@ $loaders{TextMeshProUGUI} = sub {
    weaken($obj->{owner} = $bun->read_obj($bytes, $ctx));
    $obj->{ary1} = $bytes->read_int_array(8);
    $obj->{ary2} = $bytes->read_float_array(4);
-   $obj->{ary3} = $bytes->read_int_array(2);
+   $obj->{ary3} = $bytes->read_int_array(3);
    $obj->{str} = $bytes->read_str();
 };
 

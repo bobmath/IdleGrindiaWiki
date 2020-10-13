@@ -11,7 +11,7 @@ sub extract {
    my $meta = {};
    read_meta($meta, $metafile);
    read_strings($meta);
-   read_typedefs($meta);
+   read_typedefs($meta, $metadir . 'names.txt');
    read_methods($meta);
    read_mem($meta, $codedir . 'mem0');
    find_typeinfo($meta);
@@ -22,7 +22,7 @@ sub extract {
    read_properties($meta);
    get_type_names($meta);
    #get_gen_methods($meta);
-   #get_type_layouts($meta);
+   get_type_layouts($meta);
    #get_interop($meta);
    read_events($meta);
    read_defaults($meta);
@@ -681,8 +681,8 @@ sub find_codeinfo {
       last;
    }
 
-   my @tables = qw( meth_ptrs rev_invokers gen_meth_ptrs invokers attr_gen
-      uvc_ptrs interop_data );
+   my @tables = qw( rev_invokers gen_meth_ptrs invokers attr_gen uvc_ptrs
+      interop_data windows_runtime code_gen ); # runtime present?
    for my $i (0 .. 6) {
       $meta->{memtables}{$tables[$i]} =
          { count => $hdr[2*$i], off => $hdr[2*$i+1] };
@@ -935,7 +935,7 @@ sub read_generics {
 }
 
 sub read_typedefs {
-   my ($meta) = @_;
+   my ($meta, $file) = @_;
    my $strings = $meta->{strings} or die;
 
    $meta->{typedefs} = my $typedefs = read_records($meta, 'typedefs', [
@@ -967,11 +967,13 @@ sub read_typedefs {
       ['bitfield', 'L'],
       ['token', 'L'] ]);
 
+   open my $OUT, '>:utf8', $file or die;
    foreach my $type (@$typedefs) {
-      $type->{name} = $strings->{$type->{namespace_off}};
-      $type->{name} .= '.' if length($type->{name});
-      $type->{name} .= $strings->{$type->{name_off}};
-      $type->{basename} = $type->{name};
+      my $name = $strings->{$type->{namespace_off}};
+      $name .= '.' if length($name);
+      $name .= $strings->{$type->{name_off}};
+      print $OUT "$name\n";
+      $type->{name} = $type->{basename} = $name;
       # flags:
       # 0x000007: visibility
       # 0=notpublic, 1:public, 2:nestedpublic, 3:nestedprivate, 4:nestedfamily
@@ -990,6 +992,7 @@ sub read_typedefs {
       # 0x100000: class init before field init
       # 0xC00000: custom string format
    }
+   close $OUT;
 
    $meta->{fields} = my $fields = read_records($meta, 'fields', [
       ['name_off', 'l'],

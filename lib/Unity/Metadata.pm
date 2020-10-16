@@ -15,7 +15,8 @@ sub extract {
    read_methods($meta);
    read_mem($meta, $codedir . 'mem0');
    find_typeinfo($meta);
-   #find_codeinfo($meta); # FIXME due to unity upgrade
+   find_codeinfo($meta);
+   get_method_idx($meta);
    read_generics($meta);
    read_nested_types($meta);
    read_interfaces($meta);
@@ -26,8 +27,10 @@ sub extract {
    #get_interop($meta);
    read_events($meta);
    read_defaults($meta);
-   read_usage($meta);
+   #read_usage($meta);
+   #read_rgctx($meta);
    read_vtables($meta);
+   #read_assemblies($meta);
    read_code($meta, $codedir);
    #annotate_code($meta, $codedir);
    write_types($meta, 'types.txt');
@@ -36,7 +39,6 @@ sub extract {
    write_records($metadir, 'typedefs', $meta->{typedefs});
    write_records($metadir, 'methods', $meta->{methods});
    write_records($metadir, 'specs', $meta->{meth_specs});
-   write_records($metadir, 'usage', $meta->{meta_usage});
 }
 
 sub write_types {
@@ -172,7 +174,7 @@ sub annotate_code {
    my $dyncalls = $meta->{dyncalls};
    my %funcs;
    foreach my $meth (@{$meta->{methods}}) {
-      if (defined(my $ptr = $meth->{method_ptr})) {
+      if (defined(my $ptr = $meth->{method_idx})) {
          my $num = $dyncalls->{$meth->{shortsig}}[$ptr] or next;
          $meth->{method_num} = $num;
          push @{$funcs{$num}}, $meth->{fullname};
@@ -180,7 +182,7 @@ sub annotate_code {
       my $inst = $meth->{instants} or next;
       foreach my $sig (sort keys %$inst) {
          my $info = $inst->{$sig};
-         my $num = $dyncalls->{$info->{shortsig}}[$info->{method_ptr}] or next;
+         my $num = $dyncalls->{$info->{shortsig}}[$info->{method_idx}] or next;
          $info->{method_num} = $num;
          push @{$funcs{$num}},
             $meth->{_owner} . '.' . $meth->{basename} . $sig;
@@ -193,7 +195,7 @@ sub annotate_code {
          my $methods = $inst->{$sig};
          foreach my $name (sort keys %{$methods}) {
             my $info = $methods->{$name};
-            my $num = $dyncalls->{$info->{shortsig}}[$info->{method_ptr}]
+            my $num = $dyncalls->{$info->{shortsig}}[$info->{method_idx}]
                or next;
             $info->{method_num} = $num;
             push @{$funcs{$num}}, $type->{basename} . $sig . '.' . $name;
@@ -244,15 +246,15 @@ sub annotate_code {
          my $glob = $globals{$1};
          $_ .= ' # ' . $glob if defined $glob;
       }
-      while (/\bmem_i32\[(\d+)\]/g) {
-         my $val = $lookup->{$1} or next;
-         if ($val =~ /[\x00-\x20\x7f-\xa0]/) {
-            $val =~ s/([\x00-\x1f\\"\x7f-\xa0])/sprintf "\\x%02x", ord($1)/eg;
-            $val = qq["$val"];
-         }
-         $_ .= ' # ' . $val;
-         last;
-      }
+      #while (/\bmem_i32\[(\d+)\]/g) {
+      #   my $val = $lookup->{$1} or next;
+      #   if ($val =~ /[\x00-\x20\x7f-\xa0]/) {
+      #      $val =~ s/([\x00-\x1f\\"\x7f-\xa0])/sprintf "\\x%02x", ord($1)/eg;
+      #      $val = qq["$val"];
+      #   }
+      #   $_ .= ' # ' . $val;
+      #   last;
+      #}
       print $OUT $_, "\n";
    }
    close $OUT;
@@ -329,6 +331,27 @@ sub decode_ref {
    }
 }
 
+sub read_rgctx {
+   my ($meta) = @_;
+   my $rgctx = read_records($meta, 'rgctx', [
+      ['type', 'l'], # 1=type, 2=class, 3=method
+      ['index', 'l'] ]);
+   foreach my $rec (@$rgctx) {
+      my $type = $rec->{type};
+      if ($type == 1 || $type == 2) {
+         $rec->{class} = $meta->{typenames}[$rec->{index}];
+      }
+   }
+   foreach my $type (@{$meta->{typedefs}}) {
+      $type->{rgctx} = get_slice($rgctx,
+         $type->{rgctx_start}, $type->{rgctx_count});
+   }
+   foreach my $meth (@{$meta->{methods}}) {
+      $meth->{rgctx} = get_slice($rgctx,
+         $meth->{rgctx_start}, $meth->{rgctx_count});
+   }
+}
+
 sub read_vtables {
    my ($meta) = @_;
    my $vtables = read_records($meta, 'vtables', [
@@ -358,7 +381,7 @@ sub read_interfaces {
 }
 
 sub get_type_layouts {
-   my ($meta) = @_;
+   my ($meta, $file) = @_;
    my $len = length($meta->{mem}) or die 'missing mem';
    my $ptrs = get_ints($meta, 'typedef_sizes');
    for my $i (0 .. $#$ptrs) {
@@ -531,7 +554,7 @@ sub get_gen_methods {
          unpack 'l<*', substr($meta->{mem}, $ptr, 12);
       $ptr += 12;
       my $meth = $methods->[$meth_idx] or die;
-      my $info = { invoker=>-1, shortsig=>-1, method_ptr=>-1 };
+      my $info = { invoker=>-1, shortsig=>-1, method_idx=>-1 };
       my $spec = {
          method => $meth->{basename},
          method_idx => $meth_idx,
@@ -563,8 +586,9 @@ sub get_gen_methods {
       my $spec = $meth_specs->[$spec_idx] or die;
       $spec->{unused} = 0;
       my $info = $spec->{info};
-      $info->{method_ptr} = $meth_ptrs->[$methptr_idx];
+      $info->{method_idx} = $meth_ptrs->[$methptr_idx];
       $info->{invoker} = $invoker_idx;
+      $info->{shortsig} = $meta->{invokers}{$invoker_idx} || $invoker_idx;
    }
 }
 
@@ -636,6 +660,7 @@ sub get_type_names {
       # 0x2000: has field marshal
    }
 
+   $meta->{invokers} = my $invokers = {};
    foreach my $meth (@$methods) {
       $meth->{declaring_type} = $typedefs->[$meth->{declaring_type_idx}]{name};
       my $info = $typeinfo->[$meth->{return_type_idx}];
@@ -651,42 +676,72 @@ sub get_type_names {
       }
       $sig .= 'i';
       $meth->{shortsig} = $sig;
+      my $inv = $meth->{invoker_idx};
+      $invokers->{$inv} = $sig if defined $inv;
    }
 }
 
 sub find_codeinfo {
    my ($meta) = @_;
    die 'missing mem' unless exists $meta->{mem};
-   my $memlen = length($meta->{mem});
-   my $methods = $meta->{methods} or die 'missing methods';
-   my $meth_count = 0;
 
-   my $search = pack 'V', $meth_count;
-   my (@hdr, @ptrs);
-   my $pos = -1;
-   SEARCH: while (1) {
-      $pos = index($meta->{mem}, $search, $pos+1);
-      die 'code header not found' if $pos < 0;
-      next if $pos & 3;
-      @hdr = unpack 'V*', substr($meta->{mem}, $pos, 4*2*7);
-      for (my $j = 1; $j < 14; $j += 2) {
-         my $ptr = $hdr[$j];
-         next SEARCH if ($ptr & 3) || $ptr >= $memlen;
-      }
-      @ptrs = unpack 'V*', substr($meta->{mem}, $hdr[1], $hdr[0]*4);
-      foreach my $ptr (@ptrs) {
-         next SEARCH if $ptr > $meth_count;
-      }
-      $meta->{memtables}{code_info} = { count=>7, off=>$pos };
-      last;
-   }
+   my $pos = index($meta->{mem}, "mscorlib.dll\0");
+   die if $pos < 0;
+   $pos = index($meta->{mem}, pack("V", $pos));
+   die if $pos < 0 || ($pos & 3);
+   $pos = index($meta->{mem}, pack("V", $pos));
+   die if $pos < 0 || ($pos & 3);
+   $pos = index($meta->{mem}, pack("V", $pos)) - 0x3c;
+   die if $pos < 0 || ($pos & 3);
 
    my @tables = qw( rev_invokers gen_meth_ptrs invokers attr_gen uvc_ptrs
-      interop_data windows_runtime code_gen ); # runtime present?
-   for my $i (0 .. 6) {
+      interop_data windows_runtime modules );
+   $meta->{memtables}{code_info} = { count => scalar(@tables),
+      off => $pos };
+   my @hdr = unpack("V*", substr($meta->{mem}, $pos, @tables*8));
+   for my $i (0 .. $#tables) {
       $meta->{memtables}{$tables[$i]} =
          { count => $hdr[2*$i], off => $hdr[2*$i+1] };
    }
+}
+
+sub get_method_idx {
+   my ($meta) = @_;
+   my $memlen = length($meta->{mem}) or die;
+   my $ptrs = get_ints($meta, 'modules');
+   $meta->{modules} = my $mods = [];
+   my @fields = qw( name_off meth_count meth_idx invoker_idx
+      rev_pinv_count rev_pinv_idx rgctx_rng_count rgctx_rng_ptrs
+      rgctx_count rgctx_ptrs debug_meta );
+   my $j = 0;
+   my $methods = $meta->{methods};
+   foreach my $ptr (@$ptrs) {
+      die if $ptr >= $memlen || ($ptr & 3);
+      my %mod;
+      @mod{@fields} = unpack("V*", substr($meta->{mem}, $ptr, @fields*4));
+      $mod{name} = my $name = mem_cstr($meta, $mod{name_off});
+      push @$mods, \%mod;
+
+      my @methods = unpack("V*",
+         substr($meta->{mem}, $mod{meth_idx}, $mod{meth_count}*4));
+      my @invokers = unpack("V*",
+         substr($meta->{mem}, $mod{invoker_idx}, $mod{meth_count}*4));
+      for my $i (0 .. $mod{meth_count}-1) {
+         my $meth = $methods->[$j];
+         $j++;
+         $meth->{method_idx} = $methods[$i];
+         $meth->{invoker_idx} = $invokers[$i];
+         $meth->{_module} = $name;
+      }
+   }
+}
+
+sub mem_cstr {
+   my ($meta, $off) = @_;
+   die 'bad string offset' if $off > length($meta->{mem});
+   pos($meta->{mem}) = $off;
+   $meta->{mem} =~ /\G(.*?)\0/s or die 'bad string';
+   return $1;
 }
 
 sub find_typeinfo {
@@ -1106,6 +1161,49 @@ sub read_properties {
             $prop->{$op . '_method'} = $meth->{name};
          }
       }
+   }
+}
+
+sub read_assemblies {
+   my ($meta) = @_;
+   my $strings = $meta->{strings};
+   $meta->{images} = my $images = read_records($meta, 'images', [
+      ['name_idx', 'l'],
+      ['assembly_idx', 'l'],
+      ['type_start', 'l'],
+      ['type_count', 'l'],
+      ['exported_type_start', 'l'],
+      ['exported_type_count', 'l'],
+      ['entry_point_idx', 'l'],
+      ['token', 'L'],
+      ['attribute_start', 'l'],
+      ['attribute_count', 'l'] ]);
+   foreach my $img (@$images) {
+      $img->{name} = $strings->{$img->{name_idx}};
+   }
+
+   $meta->{assemblies} = my $assemblies = read_records($meta, 'assemblies', [
+      ['image_idx', 'l'],
+      ['token', 'L'],
+      ['ref_assembly_start', 'l'],
+      ['ref_assembly_count', 'l'],
+      ['name_idx', 'l'],
+      ['culture_idx', 'l'],
+      ['hash_idx', 'l'],
+      ['pubkey_idx', 'l'],
+      ['hash_alg', 'l'],
+      ['hash_len', 'l'],
+      ['flags', 'L'],
+      ['major_ver', 'l'],
+      ['minor_ver', 'l'],
+      ['build', 'l'],
+      ['revision', 'l'],
+      ['pubkey_token', 'Q'] ]);
+   foreach my $ass (@$assemblies) {
+      $ass->{name} = $strings->{$ass->{name_idx}};
+      $ass->{culture} = $strings->{$ass->{culture_idx}};
+      $ass->{hash} = $strings->{$ass->{hash_idx}};
+      $ass->{pubkey} = $strings->{$ass->{pubkey_idx}};
    }
 }
 

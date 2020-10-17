@@ -99,7 +99,7 @@ sub write_types {
             $type .= '  static' if $meth->{static};
             $type .= '  virtual' if $meth->{virtual};
             printf $OUT "  %-16s  %s  %d\n", $meth->{name}, $type,
-               $meth->{method_num} // -1;
+               $meth->{_module_idx} // -1;
             my $params = $meth->{params} or next;
             foreach my $param (@$params) {
                printf $OUT "    %-16s  %s\n", $param->{name},
@@ -715,7 +715,8 @@ sub get_method_idx {
       rgctx_count rgctx_ptrs debug_meta );
    my $j = 0;
    my $methods = $meta->{methods};
-   foreach my $ptr (@$ptrs) {
+   for my $n (0 .. $#$ptrs) {
+      my $ptr = $ptrs->[$n];
       die if $ptr >= $memlen || ($ptr & 3);
       my %mod;
       @mod{@fields} = unpack("V*", substr($meta->{mem}, $ptr, @fields*4));
@@ -731,6 +732,7 @@ sub get_method_idx {
          $j++;
          $meth->{method_idx} = $methods[$i];
          $meth->{invoker_idx} = $invokers[$i];
+         $meth->{_module_idx} = $n;
          $meth->{_module} = $name;
       }
    }

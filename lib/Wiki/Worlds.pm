@@ -49,8 +49,7 @@ sub build {
          $highest = $num if $num > $highest;
       }
       my $step = $highest <= 8 ? 1
-         : $highest <= 30 ? 5
-         : $highest <= 70 ? 10 : 20;
+         : $highest <= 30 ? 5 : 10;
 
       my @out;
       for my $num (1 .. $highest) {

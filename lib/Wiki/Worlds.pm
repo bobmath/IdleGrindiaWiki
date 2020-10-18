@@ -41,7 +41,7 @@ sub build {
    });
 
    mkdir 'wiki/Worlds';
-   foreach my $world (1 .. 7) {
+   foreach my $world (1 .. 8) {
       my $areas = $areas{$world} or next;
       open my $OUT, '>:utf8', "wiki/Worlds/World_$world" or die;
       my $highest = 0;
@@ -82,7 +82,7 @@ sub describe_area {
    foreach my $enemy (@{$area->{enemies}}) {
       if ($enemy->{type} % 5) {
          # if not boss
-         $enemy->{title} =~ /^(\w+)/ and $prefix{$1}++;
+         $enemy->{title} =~ /^(\S+)/ and $prefix{$1}++;
       }
       my $tier = ceil($enemy->{type} / 5);
       $tiers{$tier}++;

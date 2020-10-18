@@ -47,7 +47,7 @@ sub build {
          $obj->{name} =~ /(Dungeon|Raid) (\d+) .*?(\d+)/ or return;
       $world += 0;
       $tier = ($tier + 0) || $world;
-      return if $world > 7;
+      return if $world > 8;
       my $levels = $obj->{area}{enemy_levels} or return;
       return if $levels->[0] > 1e6;
       $dungeons{$world}{$type}{$tier} = $obj;
@@ -55,7 +55,7 @@ sub build {
 
    mkdir 'wiki/Dungeons';
    my %shards;
-   foreach my $world (1 .. 7) {
+   foreach my $world (1 .. 8) {
       my $dung = $dungeons{$world};
       foreach my $type (sort keys %$dung) {
          show_dungeon($world, $type, $dung->{$type}, \%shards);
@@ -85,6 +85,8 @@ sub show_dungeon {
    foreach my $tier (@tiers) {
       my $dung = $tiers->{$tier};
       my $area = $dung->{area};
+      my $enemies = $area->{enemies};
+      next unless @$enemies;
       my $lbl = "Tier $tier";
       if ($tier == $tiers[0]) {
          $lbl .= ' (Story)';
@@ -98,7 +100,6 @@ sub show_dungeon {
          "! Num || Icon || Enemy || Level || HP || STR || INT || END || WIS",
          " || SPD\n";
 
-      my $enemies = $area->{enemies};
       my $levels = $area->{enemy_levels};
       foreach my $i (0 .. $#$enemies) {
          my $enemy = $enemies->[$i] or next;
@@ -226,7 +227,7 @@ sub show_timers {
       foreach my $type (qw[ Dungeon Raid ]) {
          my $time = $dungeons->{1}{$type}{$tier}{max_time} or die;
          my $lo = my $hi = $dungeons->{1}{$type}{$tier}{max_time} or die;
-         foreach my $world (2 .. 7) {
+         foreach my $world (2 .. 8) {
             my $dung = $dungeons->{$world}{$type}{$tier} or next;
             my $time = $dung->{max_time};
             $lo = $time if $time < $lo;

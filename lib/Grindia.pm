@@ -333,6 +333,7 @@ my %dungeons = (
    5 => 'Desert Dungeon',
    6 => 'Cemetery Dungeon',
    7 => 'Slime Dungeon',
+   8 => "Dragon's Lair Dungeon",
 );
 sub dungeon_name {
    my ($num) = @_;
@@ -347,6 +348,7 @@ my %raids = (
    5 => 'Desert Raid',
    6 => 'Cemetery Raid',
    7 => 'Slime Raid',
+   8 => "Dragon's Lair Raid",
 );
 sub raid_name {
    my ($num) = @_;

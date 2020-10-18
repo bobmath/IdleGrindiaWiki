@@ -39,11 +39,11 @@ our %enemy_types = (
    33 => 'Cube Slime',
    34 => 'Tower of Slimes',
    35 => 'Slime King',
-   #36 => 'Dragon Egg',
-   #37 => 'Mimic',
-   #38 => 'Dragon Whelp',
-   #39 => 'Dragon Defender',
-   #40 => 'The Dragon',
+   36 => 'Dragon Egg',
+   37 => 'Mimic',
+   38 => 'Dragon Whelp',
+   39 => 'Golden Statue',
+   40 => 'Ember the Dragon',
 );
 
 our %enemy_images = (
@@ -88,7 +88,7 @@ sub build {
 
 sub dungeon_enemies {
    my ($enemies, $stats, $loc, $world, $tier, $area) = @_;
-   return if $world > 7;
+   return if $world > 8;
    $tier = $world if $tier < 1;
    my $area_enemies = $area->{enemies};
    my $levels = $area->{enemy_levels};
@@ -120,7 +120,7 @@ sub dungeon_enemies {
 
 sub world_enemies {
    my ($enemies, $world, $zone, $area) = @_;
-   return if $world > 7;
+   return if $world > 8;
    my $lo = $area->{level_min};
    my $hi = $area->{level_max};
    foreach my $enemy (@{$area->{enemies}}) {

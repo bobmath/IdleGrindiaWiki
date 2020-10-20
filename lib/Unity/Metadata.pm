@@ -227,6 +227,20 @@ sub annotate_code {
       $funcs{$addr} = join ', ', @$names;
    }
 
+   if (open my $DYN, '>:utf8', $dir . 'dyncalls.txt') {
+      foreach my $sig (sort keys %$dyncalls) {
+         my $calls = $dyncalls->{$sig};
+         for my $i (0 .. $#$calls) {
+            my $addr = $calls->[$i];
+            my $line = "$sig\t$i\t$addr";
+            if (my $func = $funcs{$addr}) {
+               $line .= "\t# $func";
+            }
+            print $DYN $line, "\n";
+         }
+      }
+   }
+
    print "Annotating code\n";
    open my $IN, '<:utf8', $dir . 'code.txt' or return;
    open my $OUT, '>:utf8', $dir . 'anno.txt'

@@ -261,15 +261,16 @@ sub annotate_code {
          my $glob = $globals{$1};
          $_ .= ' # ' . $glob if defined $glob;
       }
-      #while (/\bmem_i32\[(\d+)\]/g) {
-      #   my $val = $lookup->{$1} or next;
-      #   if ($val =~ /[\x00-\x20\x7f-\xa0]/) {
-      #      $val =~ s/([\x00-\x1f\\"\x7f-\xa0])/sprintf "\\x%02x", ord($1)/eg;
-      #      $val = qq["$val"];
-      #   }
-      #   $_ .= ' # ' . $val;
-      #   last;
-      #}
+      while (/\bmem_i32\[(\d+)\]/g) {
+         my $val = $lookup->{$1} or next;
+         next if length($val) > 200;
+         if ($val =~ /[\x00-\x20\x7f-\xa0]/) {
+            $val =~ s/([\x00-\x1f\\"\x7f-\xa0])/sprintf "\\x%02x", ord($1)/eg;
+            $val = qq["$val"];
+         }
+         $_ .= ' # ' . $val;
+         last;
+      }
       print $OUT $_, "\n";
    }
    close $OUT;

@@ -27,7 +27,7 @@ sub extract {
    #get_interop($meta);
    read_events($meta);
    read_defaults($meta);
-   #read_usage($meta);
+   read_usage($meta);
    #read_rgctx($meta);
    read_vtables($meta);
    #read_assemblies($meta);
@@ -39,6 +39,7 @@ sub extract {
    write_records($metadir, 'typedefs', $meta->{typedefs});
    write_records($metadir, 'methods', $meta->{methods});
    write_records($metadir, 'specs', $meta->{meth_specs});
+   write_records($metadir, 'usage', $meta->{meta_usage});
 }
 
 sub write_types {

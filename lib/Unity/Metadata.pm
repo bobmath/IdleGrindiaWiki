@@ -32,7 +32,7 @@ sub extract {
    read_vtables($meta);
    #read_assemblies($meta);
    read_code($meta, $codedir);
-   #annotate_code($meta, $codedir);
+   annotate_code($meta, $codedir);
    write_types($meta, 'types.txt');
    write_record($metadir . 'memtables.txt', $meta->{memtables});
    write_records($metadir, 'typeinfo', $meta->{typeinfo});
@@ -99,7 +99,7 @@ sub write_types {
             $type .= '  static' if $meth->{static};
             $type .= '  virtual' if $meth->{virtual};
             printf $OUT "  %-16s  %s  %d\n", $meth->{name}, $type,
-               $meth->{_module_idx} // -1;
+               $meth->{method_num} // -1;
             my $params = $meth->{params} or next;
             foreach my $param (@$params) {
                printf $OUT "    %-16s  %s\n", $param->{name},
@@ -174,7 +174,7 @@ sub annotate_code {
    my $dyncalls = $meta->{dyncalls};
    my %funcs;
    foreach my $meth (@{$meta->{methods}}) {
-      if (defined(my $ptr = $meth->{method_idx})) {
+      if ((my $ptr = $meth->{method_idx}) > 0) {
          my $num = $dyncalls->{$meth->{shortsig}}[$ptr] or next;
          $meth->{method_num} = $num;
          push @{$funcs{$num}}, $meth->{fullname};
@@ -676,8 +676,25 @@ sub get_type_names {
       }
       $sig .= 'i';
       $meth->{shortsig} = $sig;
+      my $mod = $meth->{_module_idx};
       my $inv = $meth->{invoker_idx};
-      $invokers->{$inv} = $sig if defined $inv;
+      $invokers->{$mod}{$inv}{$sig}++ if defined($mod)
+         && defined($inv) && $inv < 0xffff_ffff;
+   }
+
+   foreach my $mod (keys %$invokers) {
+      my $mod_inv = $invokers->{$mod};
+      foreach my $inv (keys %$mod_inv) {
+         my $sigs = $mod_inv->{$inv};
+         next if keys(%$sigs) == 1;
+         delete $invokers->{$mod};
+         last;
+      }
+   }
+
+   foreach my $meth (@$methods) {
+      my $mod = $meth->{_module_idx};
+      $meth->{method_idx} = -1 unless defined($mod) && $invokers->{$mod};
    }
 }
 

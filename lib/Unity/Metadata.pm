@@ -22,9 +22,9 @@ sub extract {
    read_interfaces($meta);
    read_properties($meta);
    get_type_names($meta);
-   #get_gen_methods($meta);
+   get_gen_methods($meta);
    get_type_layouts($meta);
-   #get_interop($meta);
+   get_interop($meta);
    read_events($meta);
    read_defaults($meta);
    read_usage($meta);
@@ -604,7 +604,8 @@ sub get_gen_methods {
       my $info = $spec->{info};
       $info->{method_idx} = $meth_ptrs->[$methptr_idx];
       $info->{invoker} = $invoker_idx;
-      $info->{shortsig} = $meta->{invokers}{$invoker_idx} || $invoker_idx;
+      $info->{shortsig} = $invoker_idx;
+      #$info->{shortsig} = $meta->{invokers}{$invoker_idx} || $invoker_idx;
    }
 }
 

@@ -13,7 +13,8 @@ sub build {
    for my $i (0 .. $#{$data->{title}}) {
       if ($i % 5 == 0) {
          my $tier = $i / 5;
-         my $txt = "'''Tier " . ($tier + 1) . "'''";
+         my $page = int($tier / 4) + 1;
+         my $txt = "'''Page $page — Tier " . ($tier + 1) . "'''";
          if (my $req = $data->{required}[$tier]) {
             $txt .= " (requires $req stamps)";
          }

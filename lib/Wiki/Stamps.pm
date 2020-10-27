@@ -6,8 +6,6 @@ use warnings;
 sub build {
    my ($ctx) = @_;
    open my $OUT, '>:utf8', 'wiki/Stamps' or die;
-   print $OUT qq[{| class="wikitable"\n],
-      "|-\n! Icon || Name || Cost || Effect\n";
    my $data = $ctx->get_objects('DailyRewardData');
 
    for my $i (0 .. $#{$data->{title}}) {
@@ -15,9 +13,15 @@ sub build {
          my $tier = $i / 5;
          my $row = ($tier % 4) + 1;
          my $page = int($tier / 4) + 1;
-         my $txt = "'''Page $page, Row $row'''";
+         my $txt = "'''Row $row'''";
          if (my $req = $data->{required}[$tier]) {
             $txt .= " (requires $req stamps)";
+         }
+         if ($row == 1) {
+            print $OUT "|}\n" if $tier;
+            print $OUT "===Page $page===\n",
+               "{| class=\"wikitable\"\n",
+               "|-\n! Icon || Name || Cost || Effect\n";
          }
          print $OUT "|-\n| colspan=4 | $txt\n";
       }
@@ -33,7 +37,7 @@ sub build {
          "| @cost\n| ", Grindia::trim($data->{text}[$i]), "\n";
    }
 
-   print $OUT qq[|}\n];
+   print $OUT "|}\n";
    close $OUT;
 }
 
